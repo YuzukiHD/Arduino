@@ -1,0 +1,4 @@
+[submodule "zephyr"]
+	path = zephyr
+	url = https://github.com/YuzukiHD/zephyr.git
+	branch = zephyr-v4.2.2-f101

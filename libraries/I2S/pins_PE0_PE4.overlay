@@ -1,0 +1,30 @@
+/*
+ * I2S0 on PE0..PE4 (mux 5): PE0 BCLK, PE1 LRCK, PE2 DIN, PE3 MCLK, PE4 DOUT
+ * (the DOUT pin is not confirmed on the EVB). Use it as an extra overlay of the
+ * build. It takes the pins of Wire, Serial1 and the USB VBUS switch, so these
+ * are turned off here: Wire and Serial1 are not available in such a sketch.
+ */
+&i2c1 {
+	status = "disabled";
+};
+
+&uart5 {
+	status = "disabled";
+};
+
+&pio {
+	arduino_i2s0_pins: arduino_i2s0_pins {
+		group {
+			pinmux = <ALLWINNER_PINMUX(ALLWINNER_PIO_PE, 0, 5)
+				  ALLWINNER_PINMUX(ALLWINNER_PIO_PE, 1, 5)
+				  ALLWINNER_PINMUX(ALLWINNER_PIO_PE, 2, 5)
+				  ALLWINNER_PINMUX(ALLWINNER_PIO_PE, 3, 5)
+				  ALLWINNER_PINMUX(ALLWINNER_PIO_PE, 4, 5)>;
+		};
+	};
+};
+
+&i2s0 {
+	pinctrl-0 = <&arduino_i2s0_pins>;
+	pinctrl-names = "default";
+};

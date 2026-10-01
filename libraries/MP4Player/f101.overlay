@@ -1,0 +1,23 @@
+/*
+ * MP4Player: the display pipeline with its panel and backlight is back on (the
+ * base overlay of the variant switches it off), which takes PD0..PD22 and
+ * PB0..PB3 away from the PWM block. The SD card (smhc0), the video engine and
+ * the audio codec are enabled by the board.
+ */
+
+/ {
+	chosen {
+		zephyr,display = &display;
+	};
+};
+
+&pwm { status = "disabled"; };
+
+&display { status = "okay"; };
+&de0 { status = "okay"; };
+&tcon_top0 { status = "okay"; };
+&tcon_lcd0 { status = "okay"; };
+&rgb0 { status = "okay"; };
+&pwm_bl { status = "okay"; };
+&panel0 { status = "okay"; };
+&backlight0 { status = "okay"; };

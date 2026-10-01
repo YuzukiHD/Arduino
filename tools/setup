@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+"""One-time setup of a standalone checkout of the F101 Arduino core.
+
+  git clone --recurse-submodules <this repo> && cd <repo>
+  tools/setup [--toolchain DIR|ARCHIVE|URL]
+
+Creates, inside the checkout: .venv (west + Zephyr's python requirements),
+.west (the workspace, manifest = zephyr/west.yml), modules/ (only the four
+Zephyr modules the core needs) and toolchains/ (the XuanTie 900 newlib GCC).
+Needs git, python3 (with venv), cmake and dtc (device-tree-compiler) installed.
+"""
+import argparse
+import os
+import shutil
+import subprocess
+import sys
+import tarfile
+import urllib.request
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+MODULES = ["fatfs", "cherryusb", "opencore", "lvgl"]
+GCC = "riscv64-unknown-elf-gcc"
+
+
+def run(cmd, **kw):
+    print("+", " ".join(map(str, cmd)))
+    subprocess.run(cmd, check=True, **kw)
+
+
+def find_gcc():
+    hits = sorted((ROOT / "toolchains").glob("*/bin/" + GCC))
+    return hits[-1] if hits else None
+
+
+def install_toolchain(src):
+    dest = ROOT / "toolchains"
+    dest.mkdir(exist_ok=True)
+    if src.startswith(("http://", "https://")):
+        archive = dest / Path(src).name
+        print("downloading", src)
+        urllib.request.urlretrieve(src, archive)
+    else:
+        archive = Path(src).resolve()
+    if archive.is_dir():
+        gcc = archive / "bin" / GCC
+        if not gcc.exists():
+            sys.exit(f"{gcc} not found")
+        link = dest / archive.name
+        if not link.exists():
+            link.symlink_to(archive)
+        return
+    print("extracting", archive)
+    with tarfile.open(archive) as t:
+        t.extractall(dest)
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--toolchain", help="XuanTie 900 newlib GCC: extracted directory, .tar.gz or URL")
+    a = ap.parse_args()
+
+    for tool in ("git", "cmake", "dtc"):
+        if not shutil.which(tool):
+            sys.exit(f"{tool} not found (Debian/Ubuntu: sudo apt install git cmake device-tree-compiler python3-venv)")
+
+    run(["git", "submodule", "update", "--init", "zephyr"], cwd=ROOT)
+
+    venv = ROOT / ".venv"
+    if not venv.exists():
+        run([sys.executable, "-m", "venv", str(venv)])
+    py = str(venv / "bin" / "python")
+    run([py, "-m", "pip", "install", "-q", "--upgrade", "pip", "west", "ninja"])
+    run([py, "-m", "pip", "install", "-q", "-r", str(ROOT / "zephyr/scripts/requirements-base.txt")])
+
+    west = [str(venv / "bin" / "west")]
+    if not (ROOT / ".west").exists():
+        run(west + ["init", "-l", str(ROOT / "zephyr")], cwd=ROOT)
+    run(west + ["update", "--narrow", "-o=--depth=1"] + MODULES, cwd=ROOT)
+
+    if a.toolchain:
+        install_toolchain(a.toolchain)
+    gcc = find_gcc()
+    if not gcc and not os.environ.get("CROSS_COMPILE"):
+        print("\nNo toolchain yet: run again with --toolchain <dir|.tar.gz|URL> of the XuanTie 900 newlib GCC\n"
+              "(riscv64-unknown-elf-gcc, V3.2.0), or export CROSS_COMPILE=<prefix>.")
+        sys.exit(1)
+    print("\nready. Try:  tools/f101-arduino build examples/Blink")
+
+
+if __name__ == "__main__":
+    main()

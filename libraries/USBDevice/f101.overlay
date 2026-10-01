@@ -1,0 +1,13 @@
+/*
+ * USB 2.0 port in device mode: the OTG controller on the shared PHY.
+ * The board devicetree enables the nodes already; the sketch uses one role
+ * (device or host) at a time.
+ */
+
+&usbphy {
+	status = "okay";
+};
+
+&usbotg {
+	status = "okay";
+};

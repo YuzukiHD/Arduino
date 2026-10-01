@@ -1,0 +1,15 @@
+/*
+ * USB 2.0 port in host mode: EHCI + OHCI controllers on the shared PHY,
+ * VBUS is switched by PE2 (do not use PE2 for anything else). The board
+ * devicetree enables the nodes already; the sketch uses one role (device or
+ * host) at a time.
+ */
+
+&usbphy {
+	vbus-gpios = <&gpioe 2 0>;
+	status = "okay";
+};
+
+&usbhci {
+	status = "okay";
+};

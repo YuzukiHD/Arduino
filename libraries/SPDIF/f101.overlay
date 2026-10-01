@@ -1,0 +1,18 @@
+/* S/PDIF block: the transmitter output is PE6 (mux 6), free once the LCD is off */
+&dma {
+	status = "okay";
+};
+
+&pio {
+	arduino_owa_pins: arduino_owa_pins {
+		group {
+			pinmux = <ALLWINNER_PINMUX(ALLWINNER_PIO_PE, 6, 6)>;
+		};
+	};
+};
+
+&owa {
+	status = "okay";
+	pinctrl-0 = <&arduino_owa_pins>;
+	pinctrl-names = "default";
+};

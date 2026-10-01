@@ -1,0 +1,12 @@
+/*
+ * SD card slot: SMHC0 (PF0..PF5), card detect on PF6. The board devicetree
+ * already enables them, this only makes the dependency explicit.
+ */
+
+&smhc0 {
+	status = "okay";
+
+	sdmmc {
+		status = "okay";
+	};
+};

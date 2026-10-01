@@ -1,0 +1,11 @@
+# Arduino IDE / arduino-cli board definitions of the F101 core
+menu.variant=Variant
+
+f101evb.name=Allwinner F101 EVB (Zephyr)
+f101evb.build.board=F101_EVB
+f101evb.build.core=f101
+f101evb.build.variant=evb
+f101evb.upload.tool=xfel
+f101evb.upload.protocol=fel
+f101evb.upload.maximum_size=16777216
+f101evb.upload.maximum_data_size=16777216

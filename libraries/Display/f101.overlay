@@ -1,0 +1,21 @@
+/*
+ * The RGB LCD pipeline of the EVB comes back (the Arduino variant switches it off).
+ * The panel uses PD0..PD22 and PE6/PE7, the backlight PB0..PB3: PWM0 (PD6 PD7
+ * PD8 PB3) would take the same pins, so analogWrite() falls back to digital.
+ */
+
+/ {
+	chosen {
+		zephyr,display = &display;
+	};
+};
+
+&pwm { status = "disabled"; };
+&pwm_bl { status = "okay"; };
+&panel0 { status = "okay"; };
+&backlight0 { status = "okay"; };
+&de0 { status = "okay"; };
+&tcon_top0 { status = "okay"; };
+&tcon_lcd0 { status = "okay"; };
+&rgb0 { status = "okay"; };
+&display { status = "okay"; };

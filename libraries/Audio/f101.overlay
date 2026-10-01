@@ -1,0 +1,15 @@
+/*
+ * On-chip codec: headphone output, the speaker amplifier enable is PE10 (set
+ * by the board file). DMA channels 1 (DAC) and 2 (ADC); no pin is muxed.
+ */
+&dma {
+	status = "okay";
+};
+
+&audio_codec {
+	status = "okay";
+};
+
+&codec_analog {
+	status = "okay";
+};

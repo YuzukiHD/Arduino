@@ -1,0 +1,6 @@
+/*
+ * DBI host (SPI1 block) on PD0 (CS) PD1 (CLK) PD2 (MOSI) PD3 (DCX) PD5, reset on
+ * PD4, 5 MHz. These are RGB LCD pins: a sketch uses either DBI or Display, the
+ * Display library re-enables the RGB pipeline and the two cannot be combined.
+ */
+&dbi { status = "okay"; };

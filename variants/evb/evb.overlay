@@ -1,0 +1,58 @@
+/*
+ * Devicetree overlay of the Arduino core for the EVB: the LCD, its backlight
+ * and the 2D engine are off (their pins become GPIO), and the buses that the
+ * Arduino API exposes are enabled on free pins.
+ */
+
+/ {
+	chosen {
+		/delete-property/ zephyr,display;
+	};
+};
+
+&display { status = "disabled"; };
+&de0 { status = "disabled"; };
+&tcon_top0 { status = "disabled"; };
+&tcon_lcd0 { status = "disabled"; };
+&rgb0 { status = "disabled"; };
+&pwm_bl { status = "disabled"; };
+&g2d { status = "disabled"; };
+&panel0 { status = "disabled"; };
+&backlight0 { status = "disabled"; };
+
+/* analogWrite(): PD6 PD7 PD8 PB3 */
+&pwm {
+	status = "okay";
+};
+
+&pio {
+	arduino_twi1_pins: arduino_twi1_pins {
+		group {
+			pinmux = <ALLWINNER_PINMUX(ALLWINNER_PIO_PE, 0, 4)
+				  ALLWINNER_PINMUX(ALLWINNER_PIO_PE, 1, 4)>;
+			bias-pull-up;
+		};
+	};
+
+	arduino_uart5_pins: arduino_uart5_pins {
+		group {
+			pinmux = <ALLWINNER_PINMUX(ALLWINNER_PIO_PE, 4, 7)
+				  ALLWINNER_PINMUX(ALLWINNER_PIO_PE, 5, 7)>;
+		};
+	};
+};
+
+/* Wire */
+&i2c1 {
+	status = "okay";
+	pinctrl-0 = <&arduino_twi1_pins>;
+	pinctrl-names = "default";
+};
+
+/* Serial1 */
+&uart5 {
+	status = "okay";
+	current-speed = <115200>;
+	pinctrl-0 = <&arduino_uart5_pins>;
+	pinctrl-names = "default";
+};

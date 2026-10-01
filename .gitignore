@@ -1,0 +1,7 @@
+# created by tools/setup
+/.venv/
+/.west/
+/modules/
+/toolchains/
+/build/
+__pycache__/

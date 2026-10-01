@@ -1,0 +1,30 @@
+# Arduino platform of the Allwinner F101 core.
+#
+# The firmware is a Zephyr application, so the whole build (core, libraries and
+# sketch) is done by tools/f101-arduino through west/CMake. The recipes of the
+# IDE only hand over to it: compiling and archiving are no-ops and the "combine"
+# step runs the real build and delivers {build.project_name}.bin.
+#
+# Needs the workspace layout of this repository (west workspace in the parent
+# directory of this platform, see README.md).
+
+name=Allwinner F101 (Zephyr)
+version=0.1.0
+
+tools.f101.cmd=python3 "{runtime.platform.path}/tools/f101-arduino"
+
+recipe.c.o.pattern={tools.f101.cmd} noop "{object_file}"
+recipe.cpp.o.pattern={tools.f101.cmd} noop "{object_file}"
+recipe.S.o.pattern={tools.f101.cmd} noop "{object_file}"
+recipe.ar.pattern={tools.f101.cmd} noop "{archive_file_path}"
+
+recipe.c.combine.pattern={tools.f101.cmd} build "{build.source.path}" -o "{build.path}/f101" --variant {build.variant} --copy-to "{build.path}/{build.project_name}.bin"
+
+recipe.size.pattern=
+recipe.output.tmp_file={build.project_name}.bin
+recipe.output.save_file={build.project_name}.{build.variant}.bin
+
+# upload: the board has to be in FEL mode (power cycle) and xfel installed
+tools.xfel.path=
+tools.xfel.upload.params.verbose=
+tools.xfel.upload.pattern={tools.f101.cmd} upload "{build.path}/{build.project_name}.bin"

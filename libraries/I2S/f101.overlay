@@ -1,0 +1,13 @@
+/*
+ * I2S0 without pins: the controller works through its internal loopback
+ * (I2S.setLoopback(true)). PE0..PE4 are shared with Wire (PE0/PE1), the USB
+ * VBUS switch (PE2) and Serial1 (PE4/PE5), so they are not claimed here: add
+ * libraries/I2S/pins_PE0_PE4.overlay to route the signals to the pins.
+ */
+&dma {
+	status = "okay";
+};
+
+&i2s0 {
+	status = "okay";
+};

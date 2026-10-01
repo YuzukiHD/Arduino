@@ -1,0 +1,2 @@
+/* 2D graphics accelerator (the Arduino variant switches it off) */
+&g2d { status = "okay"; };
