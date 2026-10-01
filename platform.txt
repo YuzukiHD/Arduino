@@ -55,5 +55,5 @@ tools.xfel.upload.pattern.windows="{runtime.platform.path}/tools/upload.cmd" "{p
 
 # same download for "Upload Using Programmer" (no serial port needed)
 tools.xfel.program.params.verbose=
-tools.xfel.program.pattern={tools.xfel.upload.pattern}
-tools.xfel.program.pattern.windows={tools.xfel.upload.pattern.windows}
+tools.xfel.program.pattern="{runtime.platform.path}/tools/upload.sh" "{path}/{cmd}" "{prebuilt.path}/loader/boot.img" "{prebuilt.path}/loader/arduino_boot_fel.bin" "{prebuilt.path}/core/core.flash" "{build.path}/{build.project_name}.bin"
+tools.xfel.program.pattern.windows="{runtime.platform.path}/tools/upload.cmd" "{path}/{cmd}.exe" "{prebuilt.path}/loader/boot.img" "{prebuilt.path}/loader/arduino_boot_fel.bin" "{prebuilt.path}/core/core.flash" "{build.path}/{build.project_name}.bin"
