@@ -24,9 +24,15 @@ void setup() {
     Serial.println("SD.begin() failed");
     return;
   }
+  Serial.println("SD mounted, files:");
   File root = SD.open("/");
+  if (!root) {
+    Serial.println("cannot open the root directory");
+    return;
+  }
   list(root, 0);
   root.close();
+  Serial.println("done");
 }
 
 void loop() {

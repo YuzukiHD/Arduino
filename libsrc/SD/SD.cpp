@@ -109,7 +109,14 @@ File SDClass::open(const char *path, uint8_t mode)
 	if (!full(path, fp, sizeof(fp))) {
 		return File();
 	}
-	bool exists = fs_stat(fp, &st) == 0;
+	/* the root of a volume cannot be stat'ed on FatFS: it is a directory that always exists */
+	size_t ml = strlen(_mount);
+	bool root = strncmp(fp, _mount, ml) == 0 && (fp[ml] == 0 || (fp[ml] == '/' && fp[ml + 1] == 0));
+	if (root) {
+		fp[ml] = 0; /* "/SD:" is the path fs_opendir() takes for the root */
+		st.type = FS_DIR_ENTRY_DIR;
+	}
+	bool exists = root || fs_stat(fp, &st) == 0;
 	File::Impl *p = impl_new(fp);
 	if (!p) {
 		return File();
@@ -148,7 +155,14 @@ bool SDClass::exists(const char *path)
 {
 	char fp[PATH_MAX_LEN];
 	struct fs_dirent st;
-	return full(path, fp, sizeof(fp)) && fs_stat(fp, &st) == 0;
+	if (!full(path, fp, sizeof(fp))) {
+		return false;
+	}
+	size_t ml = strlen(_mount);
+	if (strncmp(fp, _mount, ml) == 0 && (fp[ml] == 0 || (fp[ml] == '/' && fp[ml + 1] == 0))) {
+		return true; /* the root of the volume */
+	}
+	return fs_stat(fp, &st) == 0;
 }
 
 bool SDClass::mkdir(const char *path)
