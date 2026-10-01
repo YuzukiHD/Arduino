@@ -1,0 +1,151 @@
+name: Build
+
+# Builds the prebuilt core, checks it by compiling every example, and makes the Boards Manager package.
+# A tag v<version> (the version of platform.txt) publishes the package as a GitHub release.
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  XPACK: 15.2.0-1
+
+jobs:
+  core:
+    name: Prebuilt core
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build cmake device-tree-compiler gperf
+          python -m pip install west
+          python -m pip install -r zephyr/scripts/requirements-base.txt
+
+      - name: Zephyr workspace
+        run: |
+          west init -l zephyr
+          west update fatfs cherryusb opencore --narrow -o=--depth=1
+
+      - name: xPack RISC-V GCC
+        id: gcc
+        uses: actions/cache@v4
+        with:
+          path: ~/xpack
+          key: xpack-gcc-${{ env.XPACK }}-linux-x64
+
+      - name: Fetch the compiler
+        if: steps.gcc.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/xpack
+          curl -fsSL "https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/download/v${XPACK}/xpack-riscv-none-elf-gcc-${XPACK}-linux-x64.tar.gz" \
+            | tar xz -C ~/xpack
+
+      - name: Build the core
+        run: |
+          export CROSS_COMPILE=$HOME/xpack/xpack-riscv-none-elf-gcc-${XPACK}/bin/riscv-none-elf-
+          python tools/build-core
+          ls -l prebuilt/core
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prebuilt
+          path: |
+            prebuilt/
+            !prebuilt/core/core.bin
+          retention-days: 14
+
+  package:
+    name: Package
+    needs: core
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: prebuilt
+          path: prebuilt
+
+      - name: Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libusb-1.0-0-dev p7zip-full build-essential
+
+      - uses: arduino/setup-arduino-cli@v2
+
+      - name: The tag has to be the version of the platform
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          ver=$(sed -n 's/^version=//p' platform.txt)
+          test "v$ver" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME, platform.txt says $ver"; exit 1; }
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/yuzukihd-package
+          key: package-downloads-${{ env.XPACK }}-xfel-1.4.0
+
+      # a local copy of the release, to try the Boards Manager install the way a user does it
+      - name: Package for a local test
+        run: python tools/package --out dist-test --base-url http://127.0.0.1:8765
+
+      - name: Install it with arduino-cli and compile every example
+        run: |
+          (cd dist-test && python -m http.server 8765 >/dev/null 2>&1 &)
+          sleep 2
+          arduino-cli config init
+          arduino-cli config set board_manager.additional_urls http://127.0.0.1:8765/package_yuzukihd_index.json
+          arduino-cli core update-index
+          arduino-cli core install yuzuki:f101
+          arduino-cli board listall | grep f101evb
+          fail=0
+          for d in examples/*/; do
+            n=$(basename "$d")
+            if arduino-cli compile -b yuzuki:f101:f101evb "$d" --output-dir "/tmp/out_$n" >/tmp/log_$n.txt 2>&1; then
+              echo "ok   $n"
+            else
+              echo "FAIL $n"; tail -5 /tmp/log_$n.txt; fail=1
+            fi
+          done
+          exit $fail
+
+      - name: Package for the release
+        run: |
+          base="https://github.com/${{ github.repository }}/releases/latest/download"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then base="https://github.com/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}"; fi
+          python tools/package --out dist --base-url "$base"
+          ls -l dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: boards-manager-package
+          path: dist/
+          retention-days: 30
+
+  release:
+    name: Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: package
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: boards-manager-package
+          path: dist
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

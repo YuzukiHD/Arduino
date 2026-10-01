@@ -19,6 +19,23 @@ boards.txt, platform.txt, programmers.txt   the Arduino platform
 examples/         one folder per example sketch
 ```
 
+## Install
+
+Arduino IDE 2 / arduino-cli (Windows and Linux x86_64): add this to **Additional boards manager URLs**
+(File > Preferences) and install **YuzukiHD Boards** from the Boards Manager:
+
+    https://github.com/YuzukiHD/Arduino/releases/latest/download/package_yuzukihd_index.json
+
+It installs the platform, a RISC-V GCC (xPack, cut down to what a sketch needs) and `xfel`. Linux needs
+`libusb-1.0` for `xfel` and a udev rule for the board in FEL mode (USB id 1f3a:efe8). Windows needs a WinUSB
+driver for the board in FEL mode (Zadig). macOS is not packaged yet.
+
+## Build the release (maintainers)
+
+GitHub Actions (`.github/workflows/build.yml`) does it: it builds the core with the xPack GCC, packages it, installs the
+package with arduino-cli and compiles every example, and a tag `v<platform version>` publishes the files as a release.
+The same by hand: `CROSS_COMPILE=<xPack>/bin/riscv-none-elf- tools/build-core` then `tools/package --out dist`.
+
 ## How it runs
 
 ```

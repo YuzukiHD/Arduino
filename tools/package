@@ -1,0 +1,330 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+"""Build the Arduino Boards Manager package of the YuzukiHD boards.
+
+  tools/package --out dist [--version 0.1.0] [--base-url URL] [--targets windows,linux]
+
+Needs prebuilt/ (tools/build-core) and loader/. Writes into --out:
+  yuzukihd-f101-<version>.zip                 the platform (boards.txt, cores, libraries, prebuilt, examples)
+  riscv-gcc-<ver>-<target>.{zip,tar.gz}       xPack RISC-V GCC, cut down to what a sketch needs
+  xfel-<ver>-<target>.{zip,tar.gz}            the FEL download tool
+  package_yuzukihd_index.json                 the Boards Manager index that points at the files above
+  SHA256SUMS
+
+Add the index URL under "Additional boards manager URLs" of the Arduino IDE.
+--base-url is where the files are published (default: the latest GitHub release).
+"""
+import argparse
+import hashlib
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+import time
+import urllib.request
+import zipfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+REPO = "YuzukiHD/Arduino"
+PACKAGER = "yuzuki"  # package id in the FQBN: yuzuki:f101:f101evb
+ARCH = "f101"
+XPACK = "15.2.0-1"
+XFEL = "1.4.0"
+XPACK_URL = ("https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/download/v{v}/"
+             "xpack-riscv-none-elf-gcc-{v}-{os}.{ext}")
+XFEL_WIN_URL = f"https://github.com/xboot/xfel/releases/download/v{XFEL}/xfel-windows-v{XFEL}.7z"
+XFEL_SRC = "https://github.com/xboot/xfel.git"
+
+TARGETS = {
+    "windows": {"hosts": ["x86_64-mingw32", "i686-mingw32"], "xpack": "win32-x64", "ext": "zip", "pack": "zip"},
+    "linux": {"hosts": ["x86_64-linux-gnu", "x86_64-pc-linux-gnu"], "xpack": "linux-x64", "ext": "tar.gz",
+              "pack": "tar.gz"},
+}
+# the multilib of the boards (rv32imafdc / ilp32d), as the compiler names its directory
+MULTILIB = "rv32imafdc_zicsr_zaamo_zalrsc/ilp32d"
+KEEP_BIN = {"gcc", "g++", "c++", "cpp", "gcc-15.2.0", "ar", "as", "ld", "ld.bfd", "nm", "objcopy", "objdump",
+            "readelf", "size", "strip", "ranlib", "gcc-ar", "gcc-nm", "gcc-ranlib"}
+EPOCH = (1980, 1, 1, 0, 0, 0)
+
+
+def log(*a):
+    print("[package]", *a, flush=True)
+
+
+def sha256(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def download(url, cache):
+    dst = cache / url.rsplit("/", 1)[1]
+    if dst.exists():
+        return dst
+    log("download", url)
+    cache.mkdir(parents=True, exist_ok=True)
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(url, timeout=120) as r, open(str(dst) + ".part", "wb") as f:
+                shutil.copyfileobj(r, f)
+            os.replace(str(dst) + ".part", dst)
+            return dst
+        except OSError as e:
+            log("retry after", e)
+            time.sleep(5)
+    sys.exit(f"cannot download {url}")
+
+
+def extract(archive, dest):
+    archive = Path(archive)
+    if archive.suffix == ".zip":
+        zipfile.ZipFile(archive).extractall(dest)
+    elif archive.suffix == ".7z":
+        for tool in ("7z", "7za", "7zz", "7zr"):
+            if shutil.which(tool):
+                subprocess.run([tool, "x", "-y", f"-o{dest}", str(archive)], check=True, stdout=subprocess.DEVNULL)
+                return
+        try:
+            import py7zr
+        except ImportError:
+            sys.exit("a .7z archive needs 7z or `pip install py7zr`")
+        with py7zr.SevenZipFile(archive) as z:
+            z.extractall(dest)
+    else:
+        with tarfile.open(archive) as t:
+            t.extractall(dest)
+
+
+def write_zip(src_dir, out, top):
+    """Zip src_dir below the folder `top`, with fixed time stamps, and the executable bits kept."""
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+        for p in sorted(src_dir.rglob("*")):
+            rel = f"{top}/{p.relative_to(src_dir).as_posix()}"
+            if p.is_dir():
+                continue
+            info = zipfile.ZipInfo(rel, EPOCH)
+            info.compress_type = zipfile.ZIP_DEFLATED
+            mode = p.stat().st_mode & 0o777
+            info.external_attr = (0o100000 | (0o755 if mode & 0o111 else 0o644)) << 16
+            z.writestr(info, p.read_bytes())
+
+
+def write_targz(src_dir, out, top):
+    def flt(ti):
+        ti.mtime = 0
+        ti.uid = ti.gid = 0
+        ti.uname = ti.gname = ""
+        return ti
+
+    with tarfile.open(out, "w:gz", compresslevel=9) as t:
+        for p in sorted(src_dir.rglob("*")):
+            t.add(p, f"{top}/{p.relative_to(src_dir).as_posix()}", recursive=False, filter=flt)
+
+
+def pack(src_dir, out_base, kind, top):
+    out = Path(f"{out_base}.{kind}")
+    (write_zip if kind == "zip" else write_targz)(src_dir, out, top)
+    return out
+
+
+# ---------------------------------------------------------------- platform
+
+def platform_version():
+    m = re.search(r"^version=(.+)$", (ROOT / "platform.txt").read_text(), re.M)
+    return m.group(1).strip()
+
+
+def stage_platform(dst):
+    shutil.copytree(ROOT / "cores", dst / "cores")
+    (dst / "variants").mkdir()
+    for v in (ROOT / "variants").iterdir():
+        (dst / "variants" / v.name).mkdir()
+        for f in v.glob("*.h"):
+            shutil.copyfile(f, dst / "variants" / v.name / f.name)
+    # the libraries keep their implementation in the core: only the headers go out
+    for lib in sorted((ROOT / "libraries").iterdir()):
+        if (lib / "src").is_dir():
+            shutil.copytree(lib / "src", dst / "libraries" / lib.name / "src")
+            shutil.copyfile(lib / "library.properties", dst / "libraries" / lib.name / "library.properties")
+    for f in ("boards.txt", "platform.txt", "programmers.txt"):
+        shutil.copyfile(ROOT / f, dst / f)
+    (dst / "tools").mkdir()
+    shutil.copyfile(ROOT / "tools/upload.sh", dst / "tools/upload.sh")
+    os.chmod(dst / "tools/upload.sh", 0o755)
+    cmd = (ROOT / "tools/upload.cmd").read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+    (dst / "tools/upload.cmd").write_bytes(cmd)
+    pre = ROOT / "prebuilt"
+    for need in ("core/core.elf", "core/core.flash", "core/include", "include", "sketch.ld"):
+        if not (pre / need).exists():
+            sys.exit(f"prebuilt/{need} is missing: run tools/build-core first")
+    (dst / "prebuilt/core").mkdir(parents=True)
+    shutil.copyfile(pre / "core/core.elf", dst / "prebuilt/core/core.elf")
+    shutil.copyfile(pre / "core/core.flash", dst / "prebuilt/core/core.flash")
+    shutil.copytree(pre / "core/include", dst / "prebuilt/core/include")
+    shutil.copytree(pre / "include", dst / "prebuilt/include")
+    shutil.copyfile(pre / "sketch.ld", dst / "prebuilt/sketch.ld")
+    (dst / "prebuilt/loader").mkdir()
+    for f in ("boot.img", "arduino_boot_fel.bin"):
+        shutil.copyfile(ROOT / "loader" / f, dst / "prebuilt/loader" / f)
+    shutil.copytree(ROOT / "examples", dst / "examples")
+    shutil.copyfile(ROOT / "README.md", dst / "README.md")
+
+
+def boards():
+    return [{"name": m.group(1).strip()}
+            for m in re.finditer(r"^[A-Za-z0-9_]+\.name=(.+)$", (ROOT / "boards.txt").read_text(), re.M)]
+
+
+# ---------------------------------------------------------------- tools
+
+def cut_toolchain(root):
+    """Keep what compiling and linking a sketch needs: gcc/g++ for rv32imafdc/ilp32d, binutils."""
+    mm = MULTILIB.split("/")
+    for f in list((root / "bin").iterdir()):
+        stem = f.name[:-4] if f.suffix == ".exe" else f.name
+        if f.is_dir() or f.name.startswith(("python3", "libncurses")):
+            shutil.rmtree(f) if f.is_dir() else f.unlink()
+        elif f.suffix != ".dll" and stem.removeprefix("riscv-none-elf-") not in KEEP_BIN:
+            f.unlink()
+    cc = next((root / "libexec/gcc/riscv-none-elf").iterdir())
+    for f in list(cc.iterdir()):
+        if f.suffix != ".dll" and f.stem not in ("cc1", "cc1plus", "collect2", "lto-wrapper", "liblto_plugin") \
+                and f.name != "install-tools":
+            shutil.rmtree(f) if f.is_dir() else f.unlink()
+    for d in ("libexec/gdb", "share", "include"):
+        shutil.rmtree(root / d, ignore_errors=True)
+    lg = next((root / "lib/gcc/riscv-none-elf").iterdir())
+    for f in list(lg.iterdir()):
+        if f.name in ("include", "include-fixed"):
+            continue
+        if f.is_dir() and f.name == mm[0]:
+            for g in list(f.iterdir()):
+                if g.name != mm[1]:
+                    shutil.rmtree(g) if g.is_dir() else g.unlink()
+        else:
+            shutil.rmtree(f) if f.is_dir() else f.unlink()
+    rl = root / "riscv-none-elf/lib"
+    for f in list(rl.iterdir()):
+        if f.name == mm[0]:
+            for g in list(f.iterdir()):
+                if g.name != mm[1]:
+                    shutil.rmtree(g) if g.is_dir() else g.unlink()
+        else:
+            shutil.rmtree(f) if f.is_dir() else f.unlink()
+    shutil.rmtree(root / "riscv-none-elf/include", ignore_errors=True)
+
+
+def build_toolchain(name, target, cache, work, out):
+    t = TARGETS[target]
+    arch = download(XPACK_URL.format(v=XPACK, os=t["xpack"], ext=t["ext"]), cache)
+    ex = work / f"gcc-{target}"
+    extract(arch, ex)
+    root = next(ex.iterdir())
+    cut_toolchain(root)
+    return pack(root, out / f"riscv-gcc-{XPACK}-{target}", t["pack"], f"riscv-gcc-{XPACK}")
+
+
+def build_xfel(target, cache, work, out, xfel_linux):
+    t = TARGETS[target]
+    stage = work / f"xfel-{target}"
+    stage.mkdir()
+    if target == "windows":
+        ex = work / "xfel-win-src"
+        extract(download(XFEL_WIN_URL, cache), ex)
+        src = next(ex.iterdir())
+        for f in ("xfel.exe", "libusb-1.0.dll"):
+            shutil.copyfile(src / f, stage / f)
+    else:
+        if xfel_linux:
+            shutil.copyfile(xfel_linux, stage / "xfel")
+        else:
+            src = work / "xfel-src"
+            subprocess.run(["git", "clone", "--depth", "1", "--branch", f"v{XFEL}", XFEL_SRC, str(src)], check=True)
+            subprocess.run(["make", "-j4"], cwd=src, check=True)
+            shutil.copyfile(src / "xfel", stage / "xfel")
+        os.chmod(stage / "xfel", 0o755)
+    return pack(stage, out / f"xfel-{XFEL}-{target}", t["pack"], f"xfel-{XFEL}")
+
+
+# ---------------------------------------------------------------- index
+
+def entry(path, url):
+    return {"archiveFileName": path.name, "url": url, "checksum": "SHA-256:" + sha256(path),
+            "size": str(path.stat().st_size)}
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--out", default="dist")
+    ap.add_argument("--version", default=None)
+    ap.add_argument("--base-url", default=f"https://github.com/{REPO}/releases/latest/download")
+    ap.add_argument("--targets", default="windows,linux")
+    ap.add_argument("--cache", default=str(Path.home() / ".cache/yuzukihd-package"))
+    ap.add_argument("--xfel-linux", help="a prebuilt xfel for Linux (default: build it from source)")
+    a = ap.parse_args()
+
+    version = a.version or platform_version()
+    targets = [t for t in a.targets.split(",") if t]
+    out = Path(a.out).resolve()
+    cache = Path(a.cache)
+    base = a.base_url.rstrip("/")
+    shutil.rmtree(out, ignore_errors=True)
+    out.mkdir(parents=True)
+
+    with tempfile.TemporaryDirectory() as w:
+        work = Path(w)
+        plat = work / "platform"
+        stage_platform(plat)
+        plat_zip = pack(plat, out / f"yuzukihd-{ARCH}-{version}", "zip", ARCH)
+        log("platform", plat_zip.name, plat_zip.stat().st_size // 1024, "KiB")
+
+        gcc, xfel = [], []
+        for t in targets:
+            g = build_toolchain("riscv-gcc", t, cache, work, out)
+            x = build_xfel(t, cache, work, out, a.xfel_linux)
+            log(g.name, g.stat().st_size // (1 << 20), "MiB;", x.name, x.stat().st_size // 1024, "KiB")
+            gcc.append((t, g))
+            xfel.append((t, x))
+
+    index = {"packages": [{
+        "name": PACKAGER,
+        "maintainer": "YuzukiHD",
+        "websiteURL": f"https://github.com/{REPO}",
+        "email": "",
+        "help": {"online": f"https://github.com/{REPO}"},
+        "platforms": [{
+            "name": "YuzukiHD Boards",
+            "architecture": ARCH,
+            "version": version,
+            "category": "Contributed",
+            "help": {"online": f"https://github.com/{REPO}"},
+            **entry(plat_zip, f"{base}/{plat_zip.name}"),
+            "boards": boards(),
+            "toolsDependencies": [
+                {"packager": PACKAGER, "name": "riscv-gcc", "version": XPACK},
+                {"packager": PACKAGER, "name": "xfel", "version": XFEL},
+            ],
+        }],
+        "tools": [
+            {"name": name, "version": ver,
+             "systems": [{"host": h, **entry(p, f"{base}/{p.name}")} for t, p in files for h in TARGETS[t]["hosts"]]}
+            for name, ver, files in (("riscv-gcc", XPACK, gcc), ("xfel", XFEL, xfel))
+        ],
+    }]}
+    (out / "package_yuzukihd_index.json").write_text(json.dumps(index, indent=2) + "\n")
+    with open(out / "SHA256SUMS", "w") as f:
+        for p in sorted(out.iterdir()):
+            if p.name != "SHA256SUMS":
+                f.write(f"{sha256(p)}  {p.name}\n")
+    log("done:", ", ".join(sorted(p.name for p in out.iterdir())))
+
+
+if __name__ == "__main__":
+    main()
