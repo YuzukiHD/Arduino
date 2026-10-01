@@ -3,6 +3,7 @@
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/adc.h>
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/pwm.h>
 #include <zephyr/irq.h>
 #include <zephyr/kernel.h>
@@ -17,6 +18,9 @@ static const struct device *const gpio_dev[N_BANKS] = {
 	DEVICE_DT_GET(DT_NODELABEL(gpioc)), DEVICE_DT_GET(DT_NODELABEL(gpiod)),
 	DEVICE_DT_GET(DT_NODELABEL(gpioe)), DEVICE_DT_GET(DT_NODELABEL(gpiof)),
 };
+
+/* pins of analogWrite() that were routed to the PWM output (see pwm_apply) */
+static uint32_t pwm_routed;
 
 static inline bool pin_valid(pin_size_t pin)
 {
@@ -82,6 +86,11 @@ void pinMode(pin_size_t pin, PinMode mode)
 {
 	if (!pin_valid(pin)) {
 		return;
+	}
+	for (size_t i = 0; i < ARRAY_SIZE(variant_pwm_pins); i++) {
+		if (variant_pwm_pins[i] == pin) {
+			pwm_routed &= ~BIT(i); /* the pin goes back to GPIO */
+		}
 	}
 	gpio_flags_t f;
 	switch (mode) {
@@ -245,6 +254,14 @@ static int pwm_channel_of(pin_size_t pin)
 
 static void pwm_apply(int ch, uint32_t period_ns, uint32_t duty_ns)
 {
+	/* the pins are not claimed at boot: route this one the first time it is used */
+	if (!(pwm_routed & BIT(ch))) {
+		int pin = variant_pwm_pins[ch];
+		pinctrl_soc_pin_t p = {.pinmux = ALLWINNER_PINMUX(pin >> 5, pin & 31, variant_pwm_mux[ch])};
+
+		pinctrl_configure_pins(&p, 1, PINCTRL_REG_NONE);
+		pwm_routed |= BIT(ch);
+	}
 	pwm_set(pwm_dev, ch, period_ns, duty_ns, 0);
 }
 

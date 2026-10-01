@@ -11,7 +11,6 @@
 	};
 };
 
-&pwm { status = "disabled"; };
 
 &display { status = "okay"; };
 &de0 { status = "okay"; };

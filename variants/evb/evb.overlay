@@ -4,25 +4,22 @@
  * Arduino API exposes are enabled on free pins.
  */
 
-/ {
-	chosen {
-		/delete-property/ zephyr,display;
-	};
-};
-
-&display { status = "disabled"; };
-&de0 { status = "disabled"; };
-&tcon_top0 { status = "disabled"; };
-&tcon_lcd0 { status = "disabled"; };
-&rgb0 { status = "disabled"; };
-&pwm_bl { status = "disabled"; };
-&g2d { status = "disabled"; };
-&panel0 { status = "disabled"; };
-&backlight0 { status = "disabled"; };
+/*
+ * One image serves every peripheral: devices that own pins or power are not initialized at boot, the
+ * library that uses them starts them (device_init) from its begin(). Display and DBI share PD0..PD5,
+ * a sketch uses only one of them.
+ */
+&display { zephyr,deferred-init; };
+&pwm_bl { zephyr,deferred-init; };
+&dbi { zephyr,deferred-init; };
+&usbphy { zephyr,deferred-init; };
 
 /* analogWrite(): PD6 PD7 PD8 PB3 */
 &pwm {
 	status = "okay";
+	/* analogWrite() routes PD6/PD7/PD8/PB3 itself when a pin is first used */
+	/delete-property/ pinctrl-0;
+	/delete-property/ pinctrl-names;
 };
 
 &pio {
@@ -34,12 +31,6 @@
 		};
 	};
 
-	arduino_uart5_pins: arduino_uart5_pins {
-		group {
-			pinmux = <ALLWINNER_PINMUX(ALLWINNER_PIO_PE, 4, 7)
-				  ALLWINNER_PINMUX(ALLWINNER_PIO_PE, 5, 7)>;
-		};
-	};
 };
 
 /* Wire */
@@ -49,10 +40,18 @@
 	pinctrl-names = "default";
 };
 
-/* Serial1 */
-&uart5 {
+/*
+ * Serial1..Serial5: every UART is enabled without a pin state; Serial.begin() routes
+ * the pins at run time (HardwareSerial::setPins), so the same image serves any wiring.
+ */
+&uart0 { status = "okay"; current-speed = <115200>; };
+&uart1 {
 	status = "okay";
 	current-speed = <115200>;
-	pinctrl-0 = <&arduino_uart5_pins>;
-	pinctrl-names = "default";
+	/* the board file routes it to PB0/PB1 (backlight pins): the pins are routed at run time */
+	/delete-property/ pinctrl-0;
+	/delete-property/ pinctrl-names;
 };
+&uart2 { status = "okay"; current-speed = <115200>; };
+&uart4 { status = "okay"; current-speed = <115200>; };
+&uart5 { status = "okay"; current-speed = <115200>; };

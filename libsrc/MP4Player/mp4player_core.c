@@ -418,6 +418,7 @@ int mp4p_begin(void)
 	if (P.initialised) {
 		return 0;
 	}
+	(void)device_init(disp); /* not initialized at boot */
 	if (!device_is_ready(vdec_dev) || !device_is_ready(disp) || !device_is_ready(codec_i2s) ||
 	    !device_is_ready(codec_ctl)) {
 		set_err("device not ready", -ENODEV);

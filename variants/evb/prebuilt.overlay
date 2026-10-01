@@ -1,0 +1,9 @@
+/*
+ * Prebuilt core: it is loaded at the start of the PSRAM (0x40000000, the PSRAM is brought up by
+ * the loader, nothing else lives there), and the top of the RAM is the window of the sketch
+ * (0x40e00000..0x41000000, see SKETCH_BASE): the heap of the libc, which takes all RAM above
+ * the image, has to end below it.
+ */
+&sram0 {
+	reg = <0x40000000 0xe00000>;
+};

@@ -24,6 +24,7 @@ static struct mipi_dbi_config dbi_cfg(uint8_t spi_mode)
 bool DBIClass::begin(uint8_t spiMode)
 {
 	_mode = spiMode & 3;
+	(void)device_init(dbi_dev); /* not initialized at boot: it owns PD0..PD5 */
 	_begun = device_is_ready(dbi_dev);
 	return _begun;
 }

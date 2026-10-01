@@ -147,6 +147,7 @@ int VideoDecoderClass::show(const VideoFrame &frame, bool fullRange, bool nonblo
 	if (frame.format != VideoFrame::NV12 && frame.format != VideoFrame::NV21) {
 		return -ENOTSUP;
 	}
+	(void)device_init(disp); /* the display is not brought up at boot */
 	struct display_sunxi_yuv yuv = {};
 
 	yuv.y = frame.plane[0];

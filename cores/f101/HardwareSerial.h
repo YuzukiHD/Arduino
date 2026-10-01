@@ -34,11 +34,29 @@
 
 class HardwareSerial : public Stream {
 public:
-	/* dev is a `const struct device *` (kept opaque so Arduino.h stays free of Zephyr) */
-	explicit HardwareSerial(const void *dev) : _dev(dev) {}
+	/* dev is a `const struct device *` (kept opaque so Arduino.h stays free of Zephyr),
+	 * uart is the number of the hardware UART (0..5) */
+	HardwareSerial(const void *dev, int uart) : _dev(dev), _uart(uart) {}
+
+	/*
+	 * Choose the pins before begin(), or pass them to begin(). Only combinations the
+	 * chip can route to this UART are accepted (see HardwareSerial.cpp); returns false
+	 * otherwise. Without a call the first pair of the table is used.
+	 * rx/tx are Arduino pin numbers (PE9, PE8, ...), -1 keeps the current one.
+	 */
+	bool setPins(int rx, int tx);
+	int rxPin() const { return _rxPin; }
+	int txPin() const { return _txPin; }
+	int uartNumber() const { return _uart; }
 
 	void begin(unsigned long baud) { begin(baud, SERIAL_8N1); }
 	void begin(unsigned long baud, uint16_t config);
+	void begin(unsigned long baud, uint16_t config, int rx, int tx)
+	{
+		if (setPins(rx, tx)) {
+			begin(baud, config);
+		}
+	}
 	void end();
 	int available(void) override;
 	int peek(void) override;
@@ -55,17 +73,24 @@ public:
 
 private:
 	const void *_dev;
+	int _uart;
+	int _rxPin = -1, _txPin = -1;
 	volatile uint16_t _head = 0, _tail = 0;
 	uint8_t _rx[SERIAL_RX_BUFFER_SIZE];
 	bool _started = false;
 };
 
-#if defined(HAVE_SERIAL0)
+/*
+ * Serial  console UART (UART3, PE8/PE9 until setPins)
+ * Serial1 UART5   Serial2 UART2   Serial3 UART1   Serial4 UART0   Serial5 UART4
+ * A UART that the variant does not enable is not defined: using it fails at link time.
+ */
 extern HardwareSerial Serial;
-#endif
-#if defined(HAVE_SERIAL1)
 extern HardwareSerial Serial1;
-#endif
+extern HardwareSerial Serial2;
+extern HardwareSerial Serial3;
+extern HardwareSerial Serial4;
+extern HardwareSerial Serial5;
 
 extern void serialEventRun(void);
 

@@ -10,7 +10,6 @@
 	};
 };
 
-&pwm { status = "disabled"; };
 &pwm_bl { status = "okay"; };
 &panel0 { status = "okay"; };
 &backlight0 { status = "okay"; };

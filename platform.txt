@@ -1,30 +1,59 @@
-# Arduino platform of the Allwinner F101 core.
+# Arduino platform of the Allwinner F101 (Zephyr based core).
 #
-# The firmware is a Zephyr application, so the whole build (core, libraries and
-# sketch) is done by tools/f101-arduino through west/CMake. The recipes of the
-# IDE only hand over to it: compiling and archiving are no-ops and the "combine"
-# step runs the real build and delivers {build.project_name}.bin.
-#
-# Needs the workspace layout of this repository (west workspace in the parent
-# directory of this platform, see README.md).
+# A sketch is compiled with plain gcc and linked against a prebuilt core
+# (prebuilt/core/core.elf, Zephyr and all the libraries), see tools/build-core.
+# The sketch runs from a fixed RAM window that the core starts.
 
 name=Allwinner F101 (Zephyr)
 version=0.1.0
 
-tools.f101.cmd=python3 "{runtime.platform.path}/tools/f101-arduino"
+# ---- toolchain: xPack RISC-V GCC (tool dependency "riscv-gcc"), only compiles and links the sketch ----
+compiler.path={runtime.tools.riscv-gcc.path}/bin/
+compiler.prefix=riscv-none-elf-
+compiler.gcc_version=15.2.0
 
-recipe.c.o.pattern={tools.f101.cmd} noop "{object_file}"
-recipe.cpp.o.pattern={tools.f101.cmd} noop "{object_file}"
-recipe.S.o.pattern={tools.f101.cmd} noop "{object_file}"
-recipe.ar.pattern={tools.f101.cmd} noop "{archive_file_path}"
+# ---- flags ----
+prebuilt.path={runtime.platform.path}/prebuilt
+compiler.arch.flags={build.arch_flags}
+compiler.common.flags=-mno-relax -msmall-data-limit=0 -Os -ffunction-sections -fdata-sections -fno-common -fno-pic -fno-pie -fno-asynchronous-unwind-tables -nostdinc -D__ZEPHYR__=1 -DARDUINO={runtime.ide.version} -DARDUINO_ARCH_F101 -DARDUINO_ARCH_ZEPHYR -DARDUINO_{build.board} -w
+compiler.sys.includes="-imacros{prebuilt.path}/core/include/zephyr/autoconf.h" "-imacros{prebuilt.path}/include/zephyr/toolchain/zephyr_stdint.h" "-I{prebuilt.path}/core/include" "-I{prebuilt.path}/include" -isystem "{prebuilt.path}/include/libc-minimal" -isystem "{prebuilt.path}/include/libc-common" -isystem "{prebuilt.path}/include/cpp-minimal" -isystem "{runtime.tools.riscv-gcc.path}/lib/gcc/riscv-none-elf/{compiler.gcc_version}/include"
+compiler.c.flags=-std=gnu11
+compiler.cpp.flags=-std=gnu++17 -nostdinc++ -fno-exceptions -fno-rtti -fcheck-new -fpermissive
 
-recipe.c.combine.pattern={tools.f101.cmd} build "{build.source.path}" -o "{build.path}/f101" --variant {build.variant} --copy-to "{build.path}/{build.project_name}.bin"
+build.extra_flags=
+includes.core="-I{build.core.path}" "-I{build.variant.path}"
 
-recipe.size.pattern=
+# ---- recipes ----
+recipe.c.o.pattern="{compiler.path}{compiler.prefix}gcc" {compiler.arch.flags} {compiler.common.flags} {compiler.c.flags} {build.extra_flags} {compiler.sys.includes} {includes.core} {includes} "{source_file}" -c -o "{object_file}"
+
+recipe.cpp.o.pattern="{compiler.path}{compiler.prefix}g++" {compiler.arch.flags} {compiler.common.flags} {compiler.cpp.flags} {build.extra_flags} {compiler.sys.includes} {includes.core} {includes} "{source_file}" -c -o "{object_file}"
+
+recipe.S.o.pattern="{compiler.path}{compiler.prefix}gcc" -x assembler-with-cpp {compiler.arch.flags} {compiler.common.flags} {compiler.sys.includes} {includes.core} {includes} "{source_file}" -c -o "{object_file}"
+
+recipe.ar.pattern="{compiler.path}{compiler.prefix}ar" rcs "{archive_file_path}" "{object_file}"
+
+# the sketch window header (sketch_entry) is only referenced by the linker script: pull it in with -u
+recipe.c.combine.pattern="{compiler.path}{compiler.prefix}g++" {compiler.arch.flags} -nostdlib -static -Wl,--no-relax -Wl,--gc-sections -Wl,-u,f101_sketch_header "-Wl,-T,{prebuilt.path}/sketch.ld" "-Wl,--just-symbols={prebuilt.path}/core/core.elf" "-Wl,-Map,{build.path}/{build.project_name}.map" -o "{build.path}/{build.project_name}.elf" {object_files} "{build.path}/{archive_file}" -lm -lgcc
+
+recipe.objcopy.bin.pattern="{compiler.path}{compiler.prefix}objcopy" -O binary "{build.path}/{build.project_name}.elf" "{build.path}/{build.project_name}.bin"
+
 recipe.output.tmp_file={build.project_name}.bin
-recipe.output.save_file={build.project_name}.{build.variant}.bin
+recipe.output.save_file={build.project_name}.bin
 
-# upload: the board has to be in FEL mode (power cycle) and xfel installed
-tools.xfel.path=
+recipe.size.pattern="{compiler.path}{compiler.prefix}size" -A "{build.path}/{build.project_name}.elf"
+recipe.size.regex=^(?:\.header|\.text|\.rodata|\.init_array|\.data)\s+([0-9]+).*
+recipe.size.regex.data=^(?:\.data|\.bss)\s+([0-9]+).*
+
+# ---- upload: xfel writes the SPI NOR flash, the board has to be in FEL mode (hold the FEL key
+# while powering it). The loader (SyterKit) in the first 128 KiB of the flash starts the core
+# and the sketch from the flash at every power up.
+tools.xfel.path={runtime.tools.xfel.path}
+tools.xfel.cmd=xfel
 tools.xfel.upload.params.verbose=
-tools.xfel.upload.pattern={tools.f101.cmd} upload "{build.path}/{build.project_name}.bin"
+tools.xfel.upload.pattern="{runtime.platform.path}/tools/upload.sh" "{path}/{cmd}" "{prebuilt.path}/loader/boot.img" "{prebuilt.path}/loader/arduino_boot_fel.bin" "{prebuilt.path}/core/core.flash" "{build.path}/{build.project_name}.bin"
+tools.xfel.upload.pattern.windows="{runtime.platform.path}/tools/upload.cmd" "{path}/{cmd}.exe" "{prebuilt.path}/loader/boot.img" "{prebuilt.path}/loader/arduino_boot_fel.bin" "{prebuilt.path}/core/core.flash" "{build.path}/{build.project_name}.bin"
+
+# same download for "Upload Using Programmer" (no serial port needed)
+tools.xfel.program.params.verbose=
+tools.xfel.program.pattern={tools.xfel.upload.pattern}
+tools.xfel.program.pattern.windows={tools.xfel.upload.pattern.windows}

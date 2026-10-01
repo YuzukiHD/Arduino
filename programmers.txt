@@ -1,0 +1,7 @@
+# "Upload Using Programmer" does not ask for a serial port, which xfel does not have.
+xfel.name=xfel (USB FEL)
+xfel.communication=usb
+xfel.protocol=fel
+xfel.program.protocol=fel
+xfel.program.tool=xfel
+xfel.program.extra_params=

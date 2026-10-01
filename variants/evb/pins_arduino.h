@@ -31,10 +31,12 @@
 #define LED_BUILTIN PA0
 #endif
 
-#define HAVE_SERIAL0 1 /* Serial: console UART3, PE8 (TX) / PE9 (RX), 115200 */
-#define HAVE_SERIAL1 1 /* Serial1: UART5, PE4 (TX) / PE5 (RX) */
-#define PIN_SERIAL1_TX PE4
-#define PIN_SERIAL1_RX PE5
+/*
+ * Serial = UART3 (console, PE8 TX / PE9 RX). Serial1 UART5, Serial2 UART2, Serial3 UART1,
+ * Serial4 UART0, Serial5 UART4: pins are routed by begin(baud, config, rx, tx) or setPins(rx, tx)
+ * and default to the first pair of the table in HardwareSerial.cpp, e.g. Serial1 = PE5 RX / PE4 TX.
+ * Serial2..Serial4 default onto PF0..PF5, the pins of the SD card.
+ */
 
 #define HAVE_WIRE 1 /* i2c1 */
 #define WIRE_DEV_NODE DT_NODELABEL(i2c1)
@@ -57,6 +59,8 @@
 /* analogWrite() pins, the index is the PWM channel */
 #ifdef __cplusplus
 static const int variant_pwm_pins[] = {PD6, PD7, PD8, PB3};
+/* mux function of each of them for the PWM output, routed by analogWrite() when first used */
+static const unsigned char variant_pwm_mux[] = {6, 6, 6, 7};
 #endif
 
 #endif

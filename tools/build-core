@@ -1,0 +1,127 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+"""Rebuild the prebuilt core that sketches are linked against (maintainers only).
+
+  tools/build-core
+
+Needs the west workspace this directory lives in (zephyr/, modules/, toolchains/, .venv/).
+Writes prebuilt/core/{core.elf,core.bin,core.flash} and the headers a sketch needs to
+prebuilt/include and prebuilt/core/include. Users of the Arduino core never run this.
+"""
+import os
+import re
+import shutil
+import struct
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+WS = ROOT.parent
+ZEPHYR = WS / "zephyr"
+PREBUILT = ROOT / "prebuilt"
+BUILD = WS / "build" / "core"
+LIBS = ["Wire", "SPI", "Watchdog", "AudioEngine", "Audio", "I2S", "SPDIF", "SD", "USBDevice", "USBHost",
+        "AACDecoder", "MP4", "Display", "G2D", "VideoDecoder", "MP4Player", "DBI"]
+
+
+def env():
+    e = dict(os.environ, ZEPHYR_BASE=str(ZEPHYR), ZEPHYR_TOOLCHAIN_VARIANT="cross-compile")
+    gcc = sorted((WS / "toolchains").glob("Xuantie-900-gcc-elf-newlib-*/bin/riscv64-unknown-elf-gcc"))
+    if gcc and not e.get("CROSS_COMPILE"):
+        e["CROSS_COMPILE"] = str(gcc[-1])[:-3]
+    e["PATH"] = os.pathsep.join([str(WS / ".venv/bin"), str(WS / "tools-local/usr/bin"), e["PATH"]])
+    return e
+
+
+def run(cmd, **kw):
+    print("+", " ".join(map(str, cmd)))
+    subprocess.run(cmd, check=True, **kw)
+
+
+def build(e, core_id):
+    if BUILD.exists():  # a stale configuration of an earlier overlay is not worth debugging
+        shutil.rmtree(BUILD)
+    run(["west", "build", "-b", "yuzukineko/sun252i_f101/evb", "-d", str(BUILD), str(ROOT), "--",
+         f"-DARDUINO_LIBRARIES={';'.join(LIBS)}", f"-DARDUINO_CORE_ID={core_id}", "-DARDUINO_EXPORTS="],
+        env=e, cwd=WS)
+    # second link: keep every global symbol of our code and of the C library (the linker would drop
+    # what the image itself does not use, but a sketch may call it)
+    cross = e["CROSS_COMPILE"]
+    objs = list((BUILD / "CMakeFiles/app.dir").rglob("*.obj"))
+    libs = list((BUILD / "zephyr/lib/libc").rglob("*.a")) + list((BUILD / "zephyr/lib/cpp").rglob("*.a"))
+    syms = set()
+    for i in range(0, len(objs + libs), 200):
+        out = subprocess.run([cross + "nm", "-g", "--defined-only", "-P"] + [str(f) for f in (objs + libs)[i:i + 200]],
+                             capture_output=True, text=True).stdout
+        for line in out.splitlines():
+            p = line.split()
+            if len(p) >= 2 and p[1] in "TWDBRVSGtwdbrvsg" and not p[0].endswith(":") \
+                    and not p[0].startswith(("__device_dts_ord", "z_")):
+                syms.add(p[0])
+    rsp = BUILD / "exports.rsp"
+    rsp.write_text("".join(f"-u\n{s}\n" for s in sorted(syms)))
+    print(f"{len(syms)} exported symbols")
+    run(["cmake", f"-DARDUINO_EXPORTS={rsp}", str(BUILD)], env=e)
+    run(["ninja", "-C", str(BUILD)], env=e)
+
+    out = PREBUILT / "core"
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "core.elf").write_bytes((BUILD / "zephyr/zephyr.elf").read_bytes())
+    core = (BUILD / "zephyr/zephyr.bin").read_bytes()
+    (out / "core.bin").write_bytes(core)
+    # flash image: a 4 KiB header page read by the loader, then the core
+    page = struct.pack("<8I", 0x44524146, 1, 0x40000000, len(core), core_id, 0x40E00000, 0x200000, 0)
+    (out / "core.flash").write_bytes(page.ljust(0x1000, b"\xff") + core)
+    print(f"core.bin {len(core)} bytes")
+
+
+def stage_headers(e):
+    """Copy the headers a sketch reads (probe compile) so the Zephyr tree is not needed to use the core."""
+    gxx = e["CROSS_COMPILE"] + "g++"
+    gcc_inc = subprocess.run([gxx, "-print-file-name=include"], capture_output=True, text=True).stdout.strip()
+    gen = BUILD / "zephyr/include/generated"
+    shared, per_core = PREBUILT / "include", PREBUILT / "core/include"
+    for d in (shared, per_core):
+        shutil.rmtree(d, ignore_errors=True)
+    roots = {ZEPHYR / "include": "", ZEPHYR / "lib/libc/minimal/include": "libc-minimal",
+             ZEPHYR / "lib/libc/common/include": "libc-common", ZEPHYR / "lib/cpp/minimal/include": "cpp-minimal"}
+    incs = [f"-I{ROOT / 'cores/f101'}", f"-I{ROOT / 'variants/evb'}"] + [f"-I{ROOT / 'libraries' / l / 'src'}" for l in LIBS]
+    files = []
+    # Display.h and DBI.h refuse to be included together: probe them separately
+    for n, group in enumerate([[l for l in LIBS if l != "DBI"], ["DBI"]]):
+        probe = BUILD / f"probe{n}.cpp"
+        probe.write_text("#include <Arduino.h>\n" + "".join(
+            f"#include <{h.name}>\n" for l in group for h in sorted((ROOT / "libraries" / l / "src").glob("*.h"))))
+        out = subprocess.run(
+            [gxx, "-M", "-MG", "-mabi=ilp32d", "-march=rv32imafdc_zicsr_zifencei_xtheadcmo", "-nostdinc", "-nostdinc++",
+             "-std=gnu++17", "-fno-exceptions", "-fno-rtti", "-D__ZEPHYR__=1", "-DARDUINO_ARCH_F101",
+             f"-imacros{gen}/zephyr/autoconf.h", f"-imacros{ZEPHYR}/include/zephyr/toolchain/zephyr_stdint.h",
+             f"-I{gen}/zephyr", f"-I{ZEPHYR}/include", f"-I{gen}",
+             "-isystem", str(ZEPHYR / "lib/libc/minimal/include"), "-isystem", str(ZEPHYR / "lib/libc/common/include"),
+             "-isystem", str(ZEPHYR / "lib/cpp/minimal/include"), "-isystem", gcc_inc] + incs + [str(probe)],
+            capture_output=True, text=True)
+        if out.returncode:
+            sys.exit(out.stderr)
+        files += [Path(p) for p in re.sub(r"\\\n", " ", out.stdout).split()[1:] if p.endswith((".h", ".hpp", ".inc"))]
+    for f in dict.fromkeys(files):
+        f = f.resolve()
+        if f.is_relative_to(gen):
+            dst = per_core / f.relative_to(gen)
+        else:
+            dst = next((shared / sub / f.relative_to(r) for r, sub in roots.items() if f.is_relative_to(r)), None)
+        if dst:
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(f, dst)
+    print(f"{len(files)} headers read, copied to prebuilt/")
+
+
+def main():
+    e = env()
+    build(e, int(time.time()) & 0x7FFFFFFF)
+    stage_headers(e)
+
+
+if __name__ == "__main__":
+    main()

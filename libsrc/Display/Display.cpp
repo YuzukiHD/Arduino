@@ -26,6 +26,7 @@ bool DisplayClass::begin(uint8_t brightness)
 		return true;
 	}
 	const struct device *d = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
+	(void)device_init(d); /* the display is not brought up at boot (-EALREADY when it is) */
 	if (!device_is_ready(d)) {
 		return false;
 	}
