@@ -1,10 +1,10 @@
-# Arduino platform of the Allwinner F101 (Zephyr based core).
+# Arduino platform of the YuzukiHD boards (Zephyr based core, the F101 boards first).
 #
 # A sketch is compiled with plain gcc and linked against a prebuilt core
 # (prebuilt/core/core.elf, Zephyr and all the libraries), see tools/build-core.
 # The sketch runs from a fixed RAM window that the core starts.
 
-name=Allwinner F101 (Zephyr)
+name=YuzukiHD Boards
 version=0.1.0
 
 # ---- toolchain: xPack RISC-V GCC (tool dependency "riscv-gcc"), only compiles and links the sketch ----

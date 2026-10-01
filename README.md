@@ -1,8 +1,11 @@
-# Arduino core for the Allwinner F101
+# Arduino support for YuzukiHD boards
 
-Write `.ino` sketches against the Arduino API. Underneath runs Zephyr, in a prebuilt image that the
-sketch is linked against with plain gcc, so using the core needs only the Arduino IDE (or arduino-cli),
-a RISC-V GCC and `xfel`.
+Arduino support for YuzukiHD boards: write `.ino` sketches against the Arduino API and upload them from the
+Arduino IDE or arduino-cli. Underneath runs Zephyr, in a prebuilt image that the sketch is linked against
+with plain gcc, so using it needs only the Arduino IDE (or arduino-cli), a RISC-V GCC and `xfel`.
+
+Supported boards: the Allwinner F101 based boards (the F101 EVB, YuzukiNeko). More boards and SoCs are added as
+a `cores/<soc>` / `variants/<board>` pair.
 
 ```
 cores/f101/       Arduino.h, Print/Stream/String, HardwareSerial (headers) and the sketch entry
