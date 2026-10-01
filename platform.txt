@@ -33,7 +33,7 @@ recipe.S.o.pattern="{compiler.path}{compiler.prefix}gcc" -x assembler-with-cpp {
 recipe.ar.pattern="{compiler.path}{compiler.prefix}ar" rcs "{archive_file_path}" "{object_file}"
 
 # the sketch window header (sketch_entry) is only referenced by the linker script: pull it in with -u
-recipe.c.combine.pattern="{compiler.path}{compiler.prefix}g++" {compiler.arch.flags} -nostdlib -static -Wl,--no-relax -Wl,--gc-sections -Wl,-u,f101_sketch_header "-Wl,-T,{prebuilt.path}/sketch.ld" "-Wl,--just-symbols={prebuilt.path}/core/core.elf" "-Wl,-Map,{build.path}/{build.project_name}.map" -o "{build.path}/{build.project_name}.elf" {object_files} "{build.path}/{archive_file}" -lm -lgcc
+recipe.c.combine.pattern="{compiler.path}{compiler.prefix}g++" {compiler.arch.flags} -nostdlib -static -Wl,--no-relax -Wl,--gc-sections -Wl,--no-warn-rwx-segments -Wl,-u,f101_sketch_header "-Wl,-T,{prebuilt.path}/sketch.ld" "-Wl,--just-symbols={prebuilt.path}/core/core.elf" "-Wl,-Map,{build.path}/{build.project_name}.map" -o "{build.path}/{build.project_name}.elf" {object_files} "{build.path}/{archive_file}" -lm -lgcc
 
 recipe.objcopy.bin.pattern="{compiler.path}{compiler.prefix}objcopy" -O binary "{build.path}/{build.project_name}.elf" "{build.path}/{build.project_name}.bin"
 
