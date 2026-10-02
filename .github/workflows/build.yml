@@ -107,7 +107,7 @@ jobs:
           ls -l dist-test
           (cd dist-test && python3 -m http.server 8765 >/dev/null 2>&1 &)
           sleep 2
-          curl -fsS http://127.0.0.1:8765/package_yuzukihd_index.json | head -c 300; echo
+          curl -fsS http://127.0.0.1:8765/package_yuzukihd_index.json -o /tmp/index.json && head -c 300 /tmp/index.json && echo
           arduino-cli config init
           arduino-cli config set board_manager.additional_urls http://127.0.0.1:8765/package_yuzukihd_index.json
           arduino-cli core update-index
