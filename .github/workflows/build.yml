@@ -102,20 +102,25 @@ jobs:
 
       - name: Install it with arduino-cli and compile every example
         run: |
-          (cd dist-test && python -m http.server 8765 >/dev/null 2>&1 &)
+          set -x
+          arduino-cli version
+          ls -l dist-test
+          (cd dist-test && python3 -m http.server 8765 >/dev/null 2>&1 &)
           sleep 2
+          curl -fsS http://127.0.0.1:8765/package_yuzukihd_index.json | head -c 300; echo
           arduino-cli config init
           arduino-cli config set board_manager.additional_urls http://127.0.0.1:8765/package_yuzukihd_index.json
           arduino-cli core update-index
           arduino-cli core install yuzuki:f101
-          arduino-cli board listall | grep f101evb
+          arduino-cli core list
+          arduino-cli board listall
           fail=0
           for d in examples/*/; do
             n=$(basename "$d")
-            if arduino-cli compile -b yuzuki:f101:f101evb "$d" --output-dir "/tmp/out_$n" >/tmp/log_$n.txt 2>&1; then
+            if arduino-cli compile -b yuzuki:f101:f101evb "$d" --output-dir "/tmp/out_$n" >"/tmp/log_$n.txt" 2>&1; then
               echo "ok   $n"
             else
-              echo "FAIL $n"; tail -5 /tmp/log_$n.txt; fail=1
+              echo "FAIL $n"; tail -20 "/tmp/log_$n.txt"; fail=1
             fi
           done
           exit $fail
