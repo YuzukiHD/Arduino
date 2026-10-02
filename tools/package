@@ -171,6 +171,7 @@ def stage_platform(dst):
         sys.exit("no prebuilt/<variant>-core: run tools/build-core first")
     (dst / "prebuilt").mkdir(parents=True)
     for c in cores:  # one per board (the console differs): evb-core, yuzukineko-core
+        (dst / "prebuilt" / c.name).mkdir()
         shutil.copyfile(c / "core.elf", dst / "prebuilt" / c.name / "core.elf")
         shutil.copyfile(c / "core.flash", dst / "prebuilt" / c.name / "core.flash")
         shutil.copytree(c / "include", dst / "prebuilt" / c.name / "include")
