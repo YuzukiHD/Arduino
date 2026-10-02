@@ -5,7 +5,7 @@
 # The sketch runs from a fixed RAM window that the core starts.
 
 name=YuzukiHD Boards
-version=0.1.0
+version=0.1.1
 
 # ---- toolchain: xPack RISC-V GCC (tool dependency "riscv-gcc"), only compiles and links the sketch ----
 compiler.path={runtime.tools.riscv-gcc.path}/bin/
