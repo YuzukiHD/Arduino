@@ -70,6 +70,8 @@ jobs:
     name: Package
     needs: core
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -101,7 +103,9 @@ jobs:
         run: python tools/package --out dist-test --base-url http://127.0.0.1:8765
 
       - name: Install it with arduino-cli and compile every example
+        shell: bash
         run: |
+          exec > >(tee /tmp/step9.log) 2>&1
           set -x
           arduino-cli version
           ls -l dist-test
@@ -124,6 +128,16 @@ jobs:
             fi
           done
           exit $fail
+
+      - name: Leave the step log in the repo (a failing run needs it for debugging)
+        if: failure() && !contains(github.event.head_commit.message, 'step9 log')
+        run: |
+          tail -c 20000 /tmp/step9.log > step9.log || echo "no step9.log" > step9.log
+          git config user.name "ci-log"
+          git config user.email "ci-log@users.noreply.github.com"
+          git add step9.log
+          git commit -m "step9 log of ${{ github.sha }}"
+          git push
 
       - name: Package for the release
         run: |
