@@ -8,7 +8,6 @@
  * a sketch uses only one of them.
  */
 &display { zephyr,deferred-init; };
-&pwm_bl { zephyr,deferred-init; };
 &dbi { zephyr,deferred-init; };
 &usbphy { zephyr,deferred-init; };
 
@@ -43,8 +42,7 @@
  * the pins at run time (HardwareSerial::setPins), so the same image serves any wiring.
  */
 &uart0 { status = "okay"; current-speed = <115200>; };
-/* uart1 is the console of this board and keeps the pins of the board file; the backlight is
- * deferred-init, so PB0/PB1 stay with the console until a sketch starts the backlight */
+/* uart1 is the console of this board and keeps the pins of the board file */
 &uart1 { current-speed = <115200>; };
 &uart2 { status = "okay"; current-speed = <115200>; };
 &uart4 { status = "okay"; current-speed = <115200>; };
