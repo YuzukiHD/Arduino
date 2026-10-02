@@ -1,0 +1,162 @@
+rduino-cli compile -b yuzuki:f101:f101evb examples/SerialPins/ --output-dir /tmp/out_SerialPins
++ echo 'FAIL SerialPins'
+FAIL SerialPins
++ tail -20 /tmp/log_SerialPins.txt
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: /home/runner/.cache/arduino/sketches/93AA0DB2F2052B7476100200CBEBF610/sketch/SerialPins.ino.cpp.o: in function `setup()':
+SerialPins.ino.cpp:(.text._Z5setupv+0x18): undefined reference to `HardwareSerial::begin(unsigned long, unsigned short)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: SerialPins.ino.cpp:(.text._Z5setupv+0x2c): undefined reference to `Print::println(char const*)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: SerialPins.ino.cpp:(.text._Z5setupv+0x44): undefined reference to `HardwareSerial::setPins(int, int)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: SerialPins.ino.cpp:(.text._Z5setupv+0x5a): undefined reference to `Print::println(char const*)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: SerialPins.ino.cpp:(.text._Z5setupv+0x6e): undefined reference to `HardwareSerial::begin(unsigned long, unsigned short)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: SerialPins.ino.cpp:(.text._Z5setupv+0x94): undefined reference to `Print::printf(char const*, ...)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: /home/runner/.cache/arduino/sketches/93AA0DB2F2052B7476100200CBEBF610/sketch/SerialPins.ino.cpp.o: in function `loop()':
+SerialPins.ino.cpp:(.text._Z4loopv+0x18): undefined reference to `Print::print(char const*)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: SerialPins.ino.cpp:(.text._Z4loopv+0x20): undefined reference to `millis'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: SerialPins.ino.cpp:(.text._Z4loopv+0x30): undefined reference to `Print::println(unsigned long, int)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: SerialPins.ino.cpp:(.text._Z4loopv+0x3c): undefined reference to `delay'
+collect2: error: ld returned 1 exit status
+
+[92mUsed platform[0m [92mVersion[0m [90mPath[0m
+[93myuzuki:f101[0m   0.1.0   [90m/home/runner/.arduino15/packages/yuzuki/hardware/f101/0.1.0[0m
+Error during build: exit status 1
++ fail=1
++ for d in examples/*/
+++ basename examples/StringDemo/
++ n=StringDemo
++ arduino-cli compile -b yuzuki:f101:f101evb examples/StringDemo/ --output-dir /tmp/out_StringDemo
++ echo 'FAIL StringDemo'
+FAIL StringDemo
++ tail -20 /tmp/log_StringDemo.txt
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: StringDemo.ino.cpp:(.text._Z5setupv+0xd0): undefined reference to `Print::println(String const&)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: StringDemo.ino.cpp:(.text._Z5setupv+0xe4): undefined reference to `String::String(double, unsigned char)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: StringDemo.ino.cpp:(.text._Z5setupv+0xf2): undefined reference to `Print::println(String const&)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: StringDemo.ino.cpp:(.text._Z5setupv+0xfc): undefined reference to `String::~String()'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: StringDemo.ino.cpp:(.text._Z5setupv+0x10c): undefined reference to `String::String(int, unsigned char)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: StringDemo.ino.cpp:(.text._Z5setupv+0x11a): undefined reference to `Print::println(String const&)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: StringDemo.ino.cpp:(.text._Z5setupv+0x124): undefined reference to `String::~String()'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: StringDemo.ino.cpp:(.text._Z5setupv+0x136): undefined reference to `String::String(char const*)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: StringDemo.ino.cpp:(.text._Z5setupv+0x142): undefined reference to `String::indexOf(String const&) const'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: StringDemo.ino.cpp:(.text._Z5setupv+0x152): undefined reference to `Print::println(int, int)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: StringDemo.ino.cpp:(.text._Z5setupv+0x15c): undefined reference to `String::~String()'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: StringDemo.ino.cpp:(.text._Z5setupv+0x166): undefined reference to `String::~String()'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: /home/runner/.cache/arduino/sketches/F701538CA105D00C3535FACDFBE1A112/sketch/StringDemo.ino.cpp.o: in function `loop()':
+StringDemo.ino.cpp:(.text._Z4loopv+0x1e): undefined reference to `Print::println(unsigned long, int)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: StringDemo.ino.cpp:(.text._Z4loopv+0x2e): undefined reference to `delay'
+collect2: error: ld returned 1 exit status
+
+[92mUsed platform[0m [92mVersion[0m [90mPath[0m
+[93myuzuki:f101[0m   0.1.0   [90m/home/runner/.arduino15/packages/yuzuki/hardware/f101/0.1.0[0m
+Error during build: exit status 1
++ fail=1
++ for d in examples/*/
+++ basename examples/USBMassStorage/
++ n=USBMassStorage
++ arduino-cli compile -b yuzuki:f101:f101evb examples/USBMassStorage/ --output-dir /tmp/out_USBMassStorage
++ echo 'FAIL USBMassStorage'
+FAIL USBMassStorage
++ tail -20 /tmp/log_USBMassStorage.txt
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBMassStorage.ino.cpp:(.text._Z5setupv+0x242): undefined reference to `File::openNextFile(unsigned char)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBMassStorage.ino.cpp:(.text._Z5setupv+0x25c): undefined reference to `File::~File()'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBMassStorage.ino.cpp:(.text._Z5setupv+0x266): undefined reference to `File::~File()'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBMassStorage.ino.cpp:(.text._Z5setupv+0x270): undefined reference to `File::name()'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBMassStorage.ino.cpp:(.text._Z5setupv+0x27c): undefined reference to `File::isDirectory()'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBMassStorage.ino.cpp:(.text._Z5setupv+0x292): undefined reference to `File::size()'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBMassStorage.ino.cpp:(.text._Z5setupv+0x2a4): undefined reference to `Print::printf(char const*, ...)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBMassStorage.ino.cpp:(.text._Z5setupv+0x2ae): undefined reference to `File::close()'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBMassStorage.ino.cpp:(.text._Z5setupv+0x2bc): undefined reference to `File::openNextFile(unsigned char)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBMassStorage.ino.cpp:(.text._Z5setupv+0x2c8): undefined reference to `File::operator=(File const&)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBMassStorage.ino.cpp:(.text._Z5setupv+0x2d2): undefined reference to `File::~File()'
+collect2: error: ld returned 1 exit status
+
+[92mUsed library[0m [92mVersion[0m [90mPath[0m
+[93mUSBHost[0m      1.0     [90m/home/runner/.arduino15/packages/yuzuki/hardware/f101/0.1.0/libraries/USBHost[0m
+[93mSD[0m           1.0     [90m/home/runner/.arduino15/packages/yuzuki/hardware/f101/0.1.0/libraries/SD[0m
+
+[92mUsed platform[0m [92mVersion[0m [90mPath[0m
+[93myuzuki:f101[0m   0.1.0   [90m/home/runner/.arduino15/packages/yuzuki/hardware/f101/0.1.0[0m
+Error during build: exit status 1
++ fail=1
++ for d in examples/*/
+++ basename examples/USBSerialBridge/
++ n=USBSerialBridge
++ arduino-cli compile -b yuzuki:f101:f101evb examples/USBSerialBridge/ --output-dir /tmp/out_USBSerialBridge
++ echo 'FAIL USBSerialBridge'
+FAIL USBSerialBridge
++ tail -20 /tmp/log_USBSerialBridge.txt
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBSerialBridge.ino.cpp:(.text._Z5setupv+0x32): undefined reference to `USBHostClass::begin()'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBSerialBridge.ino.cpp:(.text._Z5setupv+0x4c): undefined reference to `Print::println(char const*)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: /home/runner/.cache/arduino/sketches/904843AEDE914F86007CC91BE9A02091/sketch/USBSerialBridge.ino.cpp.o: in function `loop()':
+USBSerialBridge.ino.cpp:(.text._Z4loopv+0x1c): undefined reference to `USBHostSerialClass::present()'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBSerialBridge.ino.cpp:(.text._Z4loopv+0x32): undefined reference to `USBHostSerialClass::begin(unsigned long, unsigned short)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBSerialBridge.ino.cpp:(.text._Z4loopv+0x46): undefined reference to `USBHostSerialClass::info(USBHostDeviceInfo&)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBSerialBridge.ino.cpp:(.text._Z4loopv+0x66): undefined reference to `Print::printf(char const*, ...)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBSerialBridge.ino.cpp:(.text._Z4loopv+0x7a): undefined reference to `Print::println(char const*)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBSerialBridge.ino.cpp:(.text._Z4loopv+0x96): undefined reference to `delay'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBSerialBridge.ino.cpp:(.text._Z4loopv+0x9e): undefined reference to `USBHostSerialClass::present()'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBSerialBridge.ino.cpp:(.text._Z4loopv+0xf6): undefined reference to `Print::println(char const*)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBSerialBridge.ino.cpp:(.text._Z4loopv+0x102): undefined reference to `USBHostSerialClass::end()'
+collect2: error: ld returned 1 exit status
+
+[92mUsed library[0m [92mVersion[0m [90mPath[0m
+[93mUSBHost[0m      1.0     [90m/home/runner/.arduino15/packages/yuzuki/hardware/f101/0.1.0/libraries/USBHost[0m
+
+[92mUsed platform[0m [92mVersion[0m [90mPath[0m
+[93myuzuki:f101[0m   0.1.0   [90m/home/runner/.arduino15/packages/yuzuki/hardware/f101/0.1.0[0m
+Error during build: exit status 1
++ fail=1
++ for d in examples/*/
+++ basename examples/USBSerialEcho/
++ n=USBSerialEcho
++ arduino-cli compile -b yuzuki:f101:f101evb examples/USBSerialEcho/ --output-dir /tmp/out_USBSerialEcho
++ echo 'FAIL USBSerialEcho'
+FAIL USBSerialEcho
++ tail -20 /tmp/log_USBSerialEcho.txt
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: /home/runner/.cache/arduino/sketches/53970364BADCBF0F98EFD6B706CB2680/sketch/USBSerialEcho.ino.cpp.o: in function `setup()':
+USBSerialEcho.ino.cpp:(.text._Z5setupv+0x18): undefined reference to `HardwareSerial::begin(unsigned long, unsigned short)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBSerialEcho.ino.cpp:(.text._Z5setupv+0x40): undefined reference to `USBSerialClass::setStrings(char const*, char const*, char const*)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBSerialEcho.ino.cpp:(.text._Z5setupv+0x4c): undefined reference to `USBSerialClass::begin()'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBSerialEcho.ino.cpp:(.text._Z5setupv+0x6a): undefined reference to `Print::println(char const*)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: /home/runner/.cache/arduino/sketches/53970364BADCBF0F98EFD6B706CB2680/sketch/USBSerialEcho.ino.cpp.o: in function `loop()':
+USBSerialEcho.ino.cpp:(.text._Z4loopv+0x16): undefined reference to `USBSerialClass::connected()'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBSerialEcho.ino.cpp:(.text._Z4loopv+0x2a): undefined reference to `USBSerialClass::connected()'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBSerialEcho.ino.cpp:(.text._Z4loopv+0x48): undefined reference to `Print::println(char const*)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBSerialEcho.ino.cpp:(.text._Z4loopv+0x62): undefined reference to `Print::println(char const*)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: USBSerialEcho.ino.cpp:(.text._Z4loopv+0xc0): undefined reference to `Print::printf(char const*, ...)'
+collect2: error: ld returned 1 exit status
+
+[92mUsed library[0m [92mVersion[0m [90mPath[0m
+[93mUSBDevice[0m    1.0     [90m/home/runner/.arduino15/packages/yuzuki/hardware/f101/0.1.0/libraries/USBDevice[0m
+
+[92mUsed platform[0m [92mVersion[0m [90mPath[0m
+[93myuzuki:f101[0m   0.1.0   [90m/home/runner/.arduino15/packages/yuzuki/hardware/f101/0.1.0[0m
+Error during build: exit status 1
++ fail=1
++ for d in examples/*/
+++ basename examples/WatchdogDemo/
++ n=WatchdogDemo
++ arduino-cli compile -b yuzuki:f101:f101evb examples/WatchdogDemo/ --output-dir /tmp/out_WatchdogDemo
++ echo 'FAIL WatchdogDemo'
+FAIL WatchdogDemo
++ tail -20 /tmp/log_WatchdogDemo.txt
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: WatchdogDemo.ino.cpp:(.text._Z5setupv+0x4a): undefined reference to `Watchdog'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: WatchdogDemo.ino.cpp:(.text._Z5setupv+0x5e): undefined reference to `Print::printf(char const*, ...)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: WatchdogDemo.ino.cpp:(.text._Z5setupv+0x66): undefined reference to `millis'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: /home/runner/.cache/arduino/sketches/99C334FF40DC874D1D52B7F37E890FC0/sketch/WatchdogDemo.ino.cpp.o: in function `loop()':
+WatchdogDemo.ino.cpp:(.text._Z4loopv+0xc): undefined reference to `millis'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: WatchdogDemo.ino.cpp:(.text._Z4loopv+0x28): undefined reference to `Watchdog'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: WatchdogDemo.ino.cpp:(.text._Z4loopv+0x2c): undefined reference to `Watchdog'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: WatchdogDemo.ino.cpp:(.text._Z4loopv+0x30): undefined reference to `WatchdogClass::reset()'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: WatchdogDemo.ino.cpp:(.text._Z4loopv+0x38): undefined reference to `millis'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: WatchdogDemo.ino.cpp:(.text._Z4loopv+0x54): undefined reference to `Print::printf(char const*, ...)'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: WatchdogDemo.ino.cpp:(.text._Z4loopv+0x68): undefined reference to `delay'
+/home/runner/.arduino15/packages/yuzuki/tools/riscv-gcc/15.2.0-1/bin/../lib/gcc/riscv-none-elf/15.2.0/../../../../riscv-none-elf/bin/ld: WatchdogDemo.ino.cpp:(.text._Z4loopv+0x7c): undefined reference to `Print::println(char const*)'
+collect2: error: ld returned 1 exit status
+
+[92mUsed library[0m [92mVersion[0m [90mPath[0m
+[93mWatchdog[0m     1.0     [90m/home/runner/.arduino15/packages/yuzuki/hardware/f101/0.1.0/libraries/Watchdog[0m
+
+[92mUsed platform[0m [92mVersion[0m [90mPath[0m
+[93myuzuki:f101[0m   0.1.0   [90m/home/runner/.arduino15/packages/yuzuki/hardware/f101/0.1.0[0m
+Error during build: exit status 1
++ fail=1
++ exit 1
