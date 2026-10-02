@@ -19,16 +19,95 @@ boards.txt, platform.txt, programmers.txt   the Arduino platform
 examples/         one folder per example sketch
 ```
 
-## Install
+## Getting started
 
-Arduino IDE 2 / arduino-cli (Windows and Linux x86_64): add this to **Additional boards manager URLs**
-(File > Preferences) and install **YuzukiHD Boards** from the Boards Manager:
+### 1. What you need
 
-    https://github.com/YuzukiHD/Arduino/releases/latest/download/package_yuzukihd_index.json
+- A YuzukiHD board (YuzukiNeko, or the F101 EVB).
+- A USB cable from the PC to the board's USB port (it is also the download port) and a USB-serial adapter on the
+  console UART of the board (115200 baud) to see `Serial` output, if the board has no adapter on board.
+- **Arduino IDE 2.x** (<https://www.arduino.cc/en/software>) or `arduino-cli`. Windows 10/11 and Linux x86_64.
 
-It installs the platform, a RISC-V GCC (xPack, cut down to what a sketch needs) and `xfel`. Linux needs
-`libusb-1.0` for `xfel` and a udev rule for the board in FEL mode (USB id 1f3a:efe8). Windows needs a WinUSB
-driver for the board in FEL mode (Zadig). macOS is not packaged yet.
+### 2. Download and install
+
+You do not download this repository: the IDE fetches everything (platform, RISC-V GCC, `xfel`, about 85 MB).
+
+1. Open **File > Preferences** (Arduino > Settings on macOS-style menus), and paste this into
+   **Additional boards manager URLs**:
+
+   ```
+   https://github.com/YuzukiHD/Arduino/releases/latest/download/package_yuzukihd_index.json
+   ```
+2. Open the **Boards Manager** (left bar, or Tools > Board > Boards Manager), search for **YuzukiHD Boards** and click
+   **Install**.
+3. Select the board: **Tools > Board > YuzukiHD Boards** and pick yours (**YuzukiNeko**, or **Allwinner F101 EVB**).
+4. Select the programmer: **Tools > Programmer > xfel (USB FEL)**. The board has no serial bootloader, so the normal
+   Upload arrow cannot be used; it is the programmer upload that works (see below). The choice is remembered.
+
+With arduino-cli:
+
+```
+arduino-cli config add board_manager.additional_urls https://github.com/YuzukiHD/Arduino/releases/latest/download/package_yuzukihd_index.json
+arduino-cli core update-index
+arduino-cli core install yuzuki:f101
+```
+
+(The index only exists once a release has been published; until then use the release assets or build it, see
+"Build the release".)
+
+### 3. One-time: the USB driver for the download mode (FEL)
+
+The board is flashed over USB while it is in its boot ROM download mode, called **FEL**.
+
+- **Windows**: install the WinUSB driver once. Hold the board's **FEL key**, power the board (or plug the USB cable),
+  open <https://zadig.akeo.ie>, choose the device `USB Device (VID_1f3a PID_efe8)`, driver **WinUSB**, **Install Driver**.
+- **Linux**: install `libusb-1.0` (`sudo apt install libusb-1.0-0`) and allow access without root:
+
+  ```
+  echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="1f3a", ATTR{idProduct}=="efe8", MODE="0666"' | sudo tee /etc/udev/rules.d/50-allwinner-fel.rules
+  sudo udevadm control --reload
+  ```
+
+### 4. Your first sketch: Blink
+
+1. **File > Examples**, scroll to the examples of **YuzukiHD Boards** (Blink, SelfTest, SDInfo, DisplayBasics, ...),
+   open **Blink**. (They are also in `Documents/Arduino/hardware/yuzuki/f101/examples` if the menu does not show them.)
+2. Click **Verify** (the check mark). It compiles in a few seconds.
+3. Put the board in FEL mode: **hold the FEL key, power the board on (or reset it), then release**.
+4. **Sketch > Upload Using Programmer** (Ctrl+Shift+U). It writes the loader, the core and your sketch to the
+   board's flash and starts it. A few seconds for a small sketch.
+5. Open a serial terminal on the board's console at 115200 baud (the Arduino Serial Monitor on the adapter's COM port):
+   you should see `F101 Arduino: Blink` and `on`/`off` every half second. The LED is on pin `PA0` (the EVB has no user
+   LED: wire one there).
+
+From now on the board runs the sketch **by itself at every power up**. To upload again, put it in FEL mode again
+(hold FEL, power up): a board that runs from flash does not enter FEL by itself.
+
+If the upload says `no board in FEL mode`, the board is not in FEL: repeat step 3 and check the USB driver (section 3).
+Choosing **Upload** instead of **Upload Using Programmer**, or no programmer in the Tools menu, fails with
+`Request 'upload' failed`.
+
+### 5. Writing sketches
+
+It is the usual Arduino API: `pinMode`, `digitalWrite`, `analogRead`, `analogWrite`, `Serial`, `Wire`, `SPI`,
+`String`, `millis`, `delay`, ... Pins are named `PA0` ... `PF31` (bank letter + number) and `A0`..`A11` for the
+analog inputs. `Serial.begin(115200)` is all the setup the console needs; other UARTs are `Serial1`..`Serial5`
+(`Serial1.setPins(rx, tx)` to choose pins; the pins of the console come from the board and are not re-routed).
+The tables below list what is supported and which pins are used.
+
+Peripherals come as libraries, include what you use: `#include <SD.h>`, `<Display.h>`, `<Audio.h>`, `<MP4Player.h>`, ...
+The examples show each of them; the list is in "Libraries for the on-chip peripherals". Two things to know:
+
+- `Display` and `DBI` use the same pins (PD0..PD5): one of them per sketch.
+- A sketch is limited to 2 MiB of code and data; the system (Zephyr, drivers, all libraries, ~0.9 MB) is part of the
+  prebuilt core and is not counted. The size the IDE prints is only your sketch, so it is small (hundreds of bytes).
+
+### 6. Install without the Boards Manager (offline)
+
+Download `yuzukihd-f101-<version>.zip` from the **Releases** page (<https://github.com/YuzukiHD/Arduino/releases>), unpack
+it as `<sketchbook>/hardware/yuzuki/f101` (the sketchbook is `Documents/Arduino`), install `riscv-gcc` and `xfel` from
+the same page under `<Arduino15>/packages/yuzuki/tools/<name>/<version>` (`Arduino15` is
+`%LOCALAPPDATA%\Arduino15` on Windows, `~/.arduino15` on Linux), and restart the IDE.
 
 ## Build the release (maintainers)
 
@@ -63,7 +142,7 @@ that runs from flash does not enter FEL without the key. The loader is an applic
 | `attachInterrupt/detachInterrupt` | GPIO callbacks (`RISING/FALLING/CHANGE/ONHIGH/ONLOW`) |
 | `analogRead(A0..A11)` | GPADC, 12 bit scaled by `analogReadResolution()` (default 10) |
 | `analogWrite`, `tone`, `analogWriteFrequency` | PWM0, pins `PD6 PD7 PD8 PB3` (500 Hz default) |
-| `Serial` | console UART3 (PE8/PE9 by default) with an RX ring buffer, `begin(baud, SERIAL_8N1...)` |
+| `Serial` | the console UART of the board (its pins come from the board file), with an RX ring buffer, `begin(baud, SERIAL_8N1...)` |
 | `Serial1..Serial5` | UART5, UART2, UART1, UART0, UART4 |
 | `setPins(rx, tx)`, `begin(baud, cfg, rx, tx)` | pins are routed at run time (no devicetree edit): UART0 PF4/PF2, UART1 PF1/PF0 or PB1/PB0, UART2 PF5/PF4, UART3 PE9/PE8 or PE1/PE0, UART4 PE3/PE2, UART5 PE5/PE4 (RX/TX). Other pins are refused. The first pair is the default (Serial2..Serial4 default onto the SD card pins PF0..PF5) |
 | `Wire` | I2C1 on PE0 (SCL) / PE1 (SDA), controller mode only |

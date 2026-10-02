@@ -2,11 +2,13 @@
 # SPDX-License-Identifier: Apache-2.0
 """Rebuild the prebuilt core that sketches are linked against (maintainers only).
 
-  tools/build-core
+  tools/build-core [--board f101_evb|yuzukineko]
 
-Needs the west workspace this directory lives in (zephyr/, modules/, toolchains/, .venv/).
-Writes prebuilt/core/{core.elf,core.bin,core.flash} and the headers a sketch needs to
-prebuilt/include and prebuilt/core/include. Users of the Arduino core never run this.
+Needs the west workspace this directory lives in (zephyr/, modules/ with the three west
+projects, and a CROSS_COMPILE; the xPack riscv-none-elf-gcc works). Writes
+prebuilt/<variant>-core/{core.elf,core.flash} (the variant of the Arduino board: evb for
+f101_evb, yuzukineko for yuzukineko) and the headers a sketch needs to prebuilt/include and
+prebuilt/<variant>-core/include. Users of the Arduino core never run this.
 """
 import os
 import re
@@ -24,6 +26,7 @@ WS = ROOT if (ROOT / ".west").is_dir() and (ROOT / "zephyr/west.yml").is_file() 
 ZEPHYR = WS / "zephyr"
 PREBUILT = ROOT / "prebuilt"
 BUILD = WS / "build" / "core"
+BOARDS = {"f101_evb": "evb", "yuzukineko": "yuzukineko"}  # Zephyr board -> Arduino variant
 LIBS = ["Wire", "SPI", "Watchdog", "AudioEngine", "Audio", "I2S", "SPDIF", "SD", "USBDevice", "USBHost",
         "AACDecoder", "MP4", "Display", "G2D", "VideoDecoder", "MP4Player", "DBI"]
 
@@ -45,10 +48,14 @@ def run(cmd, **kw):
     subprocess.run(cmd, check=True, **kw)
 
 
-def build(e, core_id):
-    if BUILD.exists():  # a stale configuration of an earlier overlay is not worth debugging
-        shutil.rmtree(BUILD)
-    run(["west", "build", "-b", "yuzukineko/sun252i_f101/evb", "-d", str(BUILD), str(ROOT), "--",
+def build(e, core_id, board):
+    variant = BOARDS.get(board)
+    if variant is None:
+        sys.exit(f"unknown board {board} (have {', '.join(BOARDS)})")
+    build_dir = BUILD / variant
+    if build_dir.exists():  # a stale configuration of an earlier overlay is not worth debugging
+        shutil.rmtree(build_dir)
+    run(["west", "build", "-b", board, "-d", str(build_dir), str(ROOT), "--",
          f"-DARDUINO_LIBRARIES={';'.join(LIBS)}", f"-DARDUINO_CORE_ID={core_id}", "-DARDUINO_EXPORTS="],
         env=e, cwd=WS)
     # second link: keep every global symbol of our code and of the C library (the linker would drop
@@ -65,20 +72,20 @@ def build(e, core_id):
             if len(p) >= 2 and p[1] in "TWDBRVSGtwdbrvsg" and not p[0].endswith(":") \
                     and not p[0].startswith(("__device_dts_ord", "z_")):
                 syms.add(p[0])
-    rsp = BUILD / "exports.rsp"
+    rsp = build_dir / "exports.rsp"
     rsp.write_text("".join(f"-u\n{s}\n" for s in sorted(syms)))
     print(f"{len(syms)} exported symbols")
-    run(["cmake", f"-DARDUINO_EXPORTS={rsp}", str(BUILD)], env=e)
-    run(["ninja", "-C", str(BUILD)], env=e)
+    run(["cmake", f"-DARDUINO_EXPORTS={rsp}", str(build_dir)], env=e)
+    run(["ninja", "-C", str(build_dir)], env=e)
 
     (PREBUILT / "loader").mkdir(parents=True, exist_ok=True)
     for f in (ROOT / "loader").glob("*.*"):
         if f.suffix in (".img", ".bin"):
             shutil.copyfile(f, PREBUILT / "loader" / f.name)
-    out = PREBUILT / "core"
+    out = PREBUILT / f"{variant}-core"
     out.mkdir(parents=True, exist_ok=True)
-    (out / "core.elf").write_bytes((BUILD / "zephyr/zephyr.elf").read_bytes())
-    core = (BUILD / "zephyr/zephyr.bin").read_bytes()
+    (out / "core.elf").write_bytes((build_dir / "zephyr/zephyr.elf").read_bytes())
+    core = (build_dir / "zephyr/zephyr.bin").read_bytes()
     (out / "core.bin").write_bytes(core)
     # flash image: a 4 KiB header page read by the loader, then the core
     page = struct.pack("<8I", 0x44524146, 1, 0x40000000, len(core), core_id, 0x40E00000, 0x200000, 0)
@@ -86,14 +93,14 @@ def build(e, core_id):
     print(f"core.bin {len(core)} bytes")
 
 
-def stage_headers(e):
+def stage_headers(e, variant):
     """Copy the headers a sketch reads (probe compile) so the Zephyr tree is not needed to use the core."""
     gxx = e["CROSS_COMPILE"] + "g++"
     gcc_inc = subprocess.run([gxx, "-print-file-name=include"], capture_output=True, text=True).stdout.strip()
-    gen = BUILD / "zephyr/include/generated"
-    shared, per_core = PREBUILT / "include", PREBUILT / "core/include"
-    for d in (shared, per_core):
-        shutil.rmtree(d, ignore_errors=True)
+    gen = BUILD / variant / "zephyr/include/generated"
+    shared, per_core = PREBUILT / "include", PREBUILT / f"{variant}-core/include"
+    shutil.rmtree(shared, ignore_errors=True)
+    shutil.rmtree(per_core, ignore_errors=True)
     roots = {ZEPHYR / "include": "", ZEPHYR / "lib/libc/minimal/include": "libc-minimal",
              ZEPHYR / "lib/libc/common/include": "libc-common", ZEPHYR / "lib/cpp/minimal/include": "cpp-minimal"}
     incs = [f"-I{ROOT / 'cores/f101'}", f"-I{ROOT / 'variants/evb'}"] + [f"-I{ROOT / 'libraries' / l / 'src'}" for l in LIBS]
@@ -127,9 +134,13 @@ def stage_headers(e):
 
 
 def main():
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--board", default="f101_evb", choices=sorted(BOARDS))
+    a = ap.parse_args()
     e = env()
-    build(e, int(time.time()) & 0x7FFFFFFF)
-    stage_headers(e)
+    build(e, int(time.time()) & 0x7FFFFFFF, a.board)
+    stage_headers(e, BOARDS[a.board])
 
 
 if __name__ == "__main__":

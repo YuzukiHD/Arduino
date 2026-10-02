@@ -51,11 +51,12 @@ jobs:
           curl -fsSL "https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/download/v${XPACK}/xpack-riscv-none-elf-gcc-${XPACK}-linux-x64.tar.gz" \
             | tar xz -C ~/xpack
 
-      - name: Build the core
+      - name: Build the cores (one per board, the console differs)
         run: |
           export CROSS_COMPILE=$HOME/xpack/xpack-riscv-none-elf-gcc-${XPACK}/bin/riscv-none-elf-
-          python tools/build-core
-          ls -l prebuilt/core
+          python tools/build-core --board f101_evb
+          python tools/build-core --board yuzukineko
+          ls -l prebuilt
 
       - uses: actions/upload-artifact@v4
         with:

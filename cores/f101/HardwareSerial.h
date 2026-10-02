@@ -36,7 +36,8 @@ class HardwareSerial : public Stream {
 public:
 	/* dev is a `const struct device *` (kept opaque so Arduino.h stays free of Zephyr),
 	 * uart is the number of the hardware UART (0..5) */
-	HardwareSerial(const void *dev, int uart) : _dev(dev), _uart(uart) {}
+	HardwareSerial(const void *dev, int uart, bool fixedPins = false)
+		: _dev(dev), _uart(uart), _fixed(fixedPins) {}
 
 	/*
 	 * Choose the pins before begin(), or pass them to begin(). Only combinations the
@@ -75,6 +76,7 @@ private:
 	const void *_dev;
 	int _uart;
 	int _rxPin = -1, _txPin = -1;
+	bool _fixed; /* the pins come from the board devicetree (the console): begin() does not route */
 	volatile uint16_t _head = 0, _tail = 0;
 	uint8_t _rx[SERIAL_RX_BUFFER_SIZE];
 	bool _started = false;

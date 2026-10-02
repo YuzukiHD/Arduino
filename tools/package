@@ -145,6 +145,8 @@ def stage_platform(dst):
     shutil.copytree(ROOT / "cores", dst / "cores")
     (dst / "variants").mkdir()
     for v in (ROOT / "variants").iterdir():
+        if not v.is_dir():
+            continue
         (dst / "variants" / v.name).mkdir()
         for f in v.glob("*.h"):
             shutil.copyfile(f, dst / "variants" / v.name / f.name)
@@ -161,13 +163,17 @@ def stage_platform(dst):
     cmd = (ROOT / "tools/upload.cmd").read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
     (dst / "tools/upload.cmd").write_bytes(cmd)
     pre = ROOT / "prebuilt"
-    for need in ("core/core.elf", "core/core.flash", "core/include", "include", "sketch.ld"):
+    for need in ("include", "sketch.ld"):
         if not (pre / need).exists():
             sys.exit(f"prebuilt/{need} is missing: run tools/build-core first")
-    (dst / "prebuilt/core").mkdir(parents=True)
-    shutil.copyfile(pre / "core/core.elf", dst / "prebuilt/core/core.elf")
-    shutil.copyfile(pre / "core/core.flash", dst / "prebuilt/core/core.flash")
-    shutil.copytree(pre / "core/include", dst / "prebuilt/core/include")
+    cores = sorted(pre.glob("*-core"))
+    if not cores:
+        sys.exit("no prebuilt/<variant>-core: run tools/build-core first")
+    (dst / "prebuilt").mkdir(parents=True)
+    for c in cores:  # one per board (the console differs): evb-core, yuzukineko-core
+        shutil.copyfile(c / "core.elf", dst / "prebuilt" / c.name / "core.elf")
+        shutil.copyfile(c / "core.flash", dst / "prebuilt" / c.name / "core.flash")
+        shutil.copytree(c / "include", dst / "prebuilt" / c.name / "include")
     shutil.copytree(pre / "include", dst / "prebuilt/include")
     shutil.copyfile(pre / "sketch.ld", dst / "prebuilt/sketch.ld")
     (dst / "prebuilt/loader").mkdir()

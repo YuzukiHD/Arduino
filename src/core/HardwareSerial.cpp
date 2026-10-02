@@ -8,24 +8,47 @@
 #include "Arduino.h"
 
 /* UART n of the SoC -> devicetree node, and the object that owns it */
-#define UART_NODE(n) DT_NODELABEL(uart##n)
+#define UART_NODE_(n) uart##n
+#define UART_NODE(n) DT_NODELABEL(UART_NODE_(n))
 #define UART_OKAY(n) DT_NODE_HAS_STATUS(UART_NODE(n), okay)
 
 #define UART_OBJECT(name, n)                                                      \
 	IF_ENABLED(UART_OKAY(n), (HardwareSerial name(DEVICE_DT_GET(UART_NODE(n)), n);))
 
-/* the console UART is Serial whatever its number is */
+/* the console UART of the board (chosen zephyr,console) is Serial, whatever its number is; its pins
+ * come from the board devicetree and are not routed. The other UARTs are Serial1..Serial5. */
 #define CONSOLE_UART_IS(n) DT_SAME_NODE(UART_NODE(n), DT_CHOSEN(zephyr_console))
-#if CONSOLE_UART_IS(3)
-HardwareSerial Serial(DEVICE_DT_GET(UART_NODE(3)), 3);
+#if CONSOLE_UART_IS(0)
+#define ARDUINO_CONSOLE_UART 0
+#elif CONSOLE_UART_IS(1)
+#define ARDUINO_CONSOLE_UART 1
+#elif CONSOLE_UART_IS(2)
+#define ARDUINO_CONSOLE_UART 2
+#elif CONSOLE_UART_IS(3)
+#define ARDUINO_CONSOLE_UART 3
+#elif CONSOLE_UART_IS(4)
+#define ARDUINO_CONSOLE_UART 4
+#elif CONSOLE_UART_IS(5)
+#define ARDUINO_CONSOLE_UART 5
 #else
-#error "the Arduino core expects the console on UART3"
+#error "the console of the board is not one of UART0..UART5"
 #endif
+HardwareSerial Serial(DEVICE_DT_GET(UART_NODE(ARDUINO_CONSOLE_UART)), ARDUINO_CONSOLE_UART, true);
+#if !CONSOLE_UART_IS(5)
 UART_OBJECT(Serial1, 5)
+#endif
+#if !CONSOLE_UART_IS(2)
 UART_OBJECT(Serial2, 2)
+#endif
+#if !CONSOLE_UART_IS(1)
 UART_OBJECT(Serial3, 1)
+#endif
+#if !CONSOLE_UART_IS(0)
 UART_OBJECT(Serial4, 0)
+#endif
+#if !CONSOLE_UART_IS(4)
 UART_OBJECT(Serial5, 4)
+#endif
 
 /*
  * Pins that can carry a UART: {rx, tx, mux function}. The first entry is the default.
@@ -117,7 +140,7 @@ void HardwareSerial::begin(unsigned long baud, uint16_t config)
 	if (!d || !device_is_ready(d)) {
 		return;
 	}
-	if (_rxPin < 0 && !setPins(uart_routes[_uart][0].rx, uart_routes[_uart][0].tx)) {
+	if (_rxPin < 0 && !_fixed && !setPins(uart_routes[_uart][0].rx, uart_routes[_uart][0].tx)) {
 		return;
 	}
 	struct uart_config c = {};

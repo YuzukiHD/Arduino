@@ -1,0 +1,51 @@
+/*
+ * Devicetree overlay of the Arduino core for the YuzukiNeko.
+ */
+
+/*
+ * One image serves every peripheral: devices that own pins or power are not initialized at boot, the
+ * library that uses them starts them (device_init) from its begin(). Display and DBI share PD0..PD5,
+ * a sketch uses only one of them.
+ */
+&display { zephyr,deferred-init; };
+&pwm_bl { zephyr,deferred-init; };
+&dbi { zephyr,deferred-init; };
+&usbphy { zephyr,deferred-init; };
+
+/* analogWrite(): PD6 PD7 PD8 PB3 */
+&pwm {
+	status = "okay";
+	/* analogWrite() routes PD6/PD7/PD8/PB3 itself when a pin is first used */
+	/delete-property/ pinctrl-0;
+	/delete-property/ pinctrl-names;
+};
+
+&pio {
+	arduino_twi1_pins: arduino_twi1_pins {
+		group {
+			pinmux = <ALLWINNER_PINMUX(ALLWINNER_PIO_PE, 0, 4)
+				  ALLWINNER_PINMUX(ALLWINNER_PIO_PE, 1, 4)>;
+			bias-pull-up;
+		};
+	};
+
+};
+
+/* Wire */
+&i2c1 {
+	status = "okay";
+	pinctrl-0 = <&arduino_twi1_pins>;
+	pinctrl-names = "default";
+};
+
+/*
+ * Serial1..Serial5: every UART is enabled without a pin state; Serial.begin() routes
+ * the pins at run time (HardwareSerial::setPins), so the same image serves any wiring.
+ */
+&uart0 { status = "okay"; current-speed = <115200>; };
+/* uart1 is the console of this board and keeps the pins of the board file; the backlight is
+ * deferred-init, so PB0/PB1 stay with the console until a sketch starts the backlight */
+&uart1 { current-speed = <115200>; };
+&uart2 { status = "okay"; current-speed = <115200>; };
+&uart4 { status = "okay"; current-speed = <115200>; };
+&uart5 { status = "okay"; current-speed = <115200>; };
